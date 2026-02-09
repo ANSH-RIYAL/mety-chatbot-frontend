@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { HeartPulse, RefreshCw } from "lucide-react";
 import { useStore } from "@/lib/store";
 import * as api from "@/lib/api";
+import { cn } from "@/lib/utils";
 
-export function LifespanCard() {
+export function LifespanCard({ embedded = false }: { embedded?: boolean }) {
   const { lifespanProjection, setLifespanProjection, userId } = useStore();
 
   const handleRecalculate = async () => {
@@ -13,18 +14,18 @@ export function LifespanCard() {
     try {
       // Set loading state - show "-" during calculation
       setLifespanProjection({ _loading: true } as any);
-
+      
       // Reload plans from backend first to ensure we have latest values
       const { loadPlans } = await import("@/lib/store");
       await loadPlans(userId);
-
+      
       // Get latest plans from store (after reload)
       const { targetPlan: latestTarget, currentPlan: latestCurrent, profile: latestProfile } = useStore.getState();
-
+      
       // Build prediction input: target plan (diffs) + current plan (for missing values)
       // Target plan only contains diffs, so we fill missing with current plan
       const predictionInput: Record<string, number> = {};
-
+      
       const predictionVars = [
         "alcohol", "calorie_restriction", "cardio", "dairy", "dietary_fiber",
         "fat_trans", "fish_oil_omega_3", "fruits_and_veggies", "gender",
@@ -34,7 +35,7 @@ export function LifespanCard() {
         "sauna_frequency", "sleep_duration", "strength_training",
         "vitamin_e", "water", "age"
       ];
-
+      
       // Start with current plan values (base)
       predictionVars.forEach((key) => {
         const currentVal = latestCurrent[key as keyof typeof latestCurrent];
@@ -42,7 +43,7 @@ export function LifespanCard() {
           predictionInput[key] = Number(currentVal);
         }
       });
-
+      
       // Overlay target plan values (diffs) - these override current plan
       // Only include non-zero values from target plan
       Object.entries(latestTarget).forEach(([key, value]) => {
@@ -52,7 +53,7 @@ export function LifespanCard() {
           }
         }
       });
-
+      
       // Handle age and gender - check target first, then current, then profile
       if (!predictionInput.age) {
         const targetAge = (latestTarget as any).age;
@@ -69,7 +70,7 @@ export function LifespanCard() {
           return;
         }
       }
-
+      
       if (!predictionInput.gender && predictionInput.gender !== 0) {
         const targetGender = (latestTarget as any).gender;
         const currentGender = (latestCurrent as any).gender;
@@ -101,7 +102,7 @@ export function LifespanCard() {
       alert("Failed to calculate predictions. Please try again.");
       // Restore previous projection on error
       const { lifespanProjection: prev } = useStore.getState();
-      if (!prev || !(prev as any)._loading) {
+      if (!prev || !(prev as any)?._loading) {
         setLifespanProjection(prev);
       }
     }
@@ -121,14 +122,14 @@ export function LifespanCard() {
   const hasProjection = projection && !isLoading && lifespan !== undefined && lifespan !== null;
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className={cn(embedded && "border-0 shadow-none bg-transparent")}>
+      <CardHeader className={cn(embedded ? "p-0 pb-2" : "p-4 pb-2")}>
         <CardTitle className="text-sm font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wider">
           <HeartPulse className="h-4 w-4 text-primary" />
           Projections
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className={cn(embedded ? "p-0 pt-0 space-y-3" : "p-4 pt-0 space-y-3")}>
         {/* Always show structure - use "-" during loading */}
         <div>
           <div className="text-3xl font-bold text-primary tracking-tight">
@@ -145,7 +146,7 @@ export function LifespanCard() {
           </p>
         </div>
 
-        <div className="space-y-2 pt-2">
+        <div className="space-y-2 pt-1">
           {hasProjection && risks.length > 0 ? (
             risks.map((risk) => {
               if (risk.rr === undefined) return null;

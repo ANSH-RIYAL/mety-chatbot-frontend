@@ -6,14 +6,24 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStore } from "@/lib/store";
 import * as api from "@/lib/api";
+import { useEffect } from "react";
 
 export default function AboutMe() {
   const [, setLocation] = useLocation();
   const { userId, profile, updateProfile, setLoading, setError } = useStore();
   
-  const { register, handleSubmit, setValue } = useForm({
+  const { register, handleSubmit, setValue, watch } = useForm({
     defaultValues: profile || {}
   });
+
+  // Make Select fully controlled so it can't silently fall back to "0" (Male).
+  // Also handles the case where profile loads after first render.
+  useEffect(() => {
+    if (profile?.gender === 0 || profile?.gender === 1) {
+      setValue("gender", profile.gender);
+    }
+    // Intentionally do nothing when gender is unset (undefined/null)
+  }, [profile?.gender, setValue]);
 
   const onSubmit = async (data: any) => {
     if (!userId) {
@@ -31,11 +41,17 @@ export default function AboutMe() {
         payload: {
           name: data.name,
           age: data.age,
-          gender: data.gender,
+          // Only send gender if user explicitly selected it
+          gender: typeof data.gender === "number" ? data.gender : undefined,
         },
       });
 
-      updateProfile(data);
+      // Avoid overwriting existing stored gender with undefined
+      updateProfile({
+        name: data.name,
+        age: data.age,
+        ...(typeof data.gender === "number" ? { gender: data.gender } : {}),
+      });
       
       setLocation("/onboarding/supplements");
     } catch (error) {
@@ -68,10 +84,19 @@ export default function AboutMe() {
 
         <div className="grid gap-2">
           <Label>Gender</Label>
-          <Select 
-            defaultValue={String(profile?.gender ?? 0)} 
-            onValueChange={(v) => setValue("gender", parseInt(v))}
-          >
+          {/*
+            Don't default to Male when gender is not set.
+            Only preselect a value if we already have one saved in profile.
+          */}
+          {(() => {
+            const watchedGender = watch("gender");
+            const selectValue =
+              watchedGender === 0 || watchedGender === 1 ? String(watchedGender) : undefined;
+            return (
+              <Select
+                value={selectValue}
+                onValueChange={(v) => setValue("gender", parseInt(v, 10))}
+              >
             <SelectTrigger>
               <SelectValue placeholder="Select gender" />
             </SelectTrigger>
@@ -79,7 +104,9 @@ export default function AboutMe() {
               <SelectItem value="0">Male</SelectItem>
               <SelectItem value="1">Female</SelectItem>
             </SelectContent>
-          </Select>
+              </Select>
+            );
+          })()}
         </div>
       </div>
     </OnboardingWrapper>
