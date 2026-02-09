@@ -16,16 +16,13 @@ export default function Plan() {
   const [location] = useLocation();
   const { userId, currentPlan, targetPlan, optimalPlan, updateTargetPlan, setLoading, setError, latestDiffDetected, latestSuggestedPlan } = useStore();
 
-  // Initialize form: use targetPlan if it has values, otherwise default to currentPlan
   const getInitialFormValues = () => {
     if (targetPlan && Object.keys(targetPlan).length > 0) {
-      // Check if targetPlan has any non-zero values
       const hasNonZeroValues = Object.values(targetPlan).some(val => val !== 0 && val !== null && val !== undefined);
       if (hasNonZeroValues) {
         return targetPlan;
       }
     }
-    // Default to currentPlan if targetPlan is empty or all zeros
     return currentPlan || {};
   };
 
@@ -33,12 +30,10 @@ export default function Plan() {
     defaultValues: getInitialFormValues()
   });
 
-  // Load plans on mount and when userId changes
   useEffect(() => {
     if (userId) {
       loadPlans(userId).then(() => {
         const { targetPlan: currentTarget, currentPlan: currentCurrent } = useStore.getState();
-        // Use targetPlan if it has values, otherwise default to currentPlan
         const formValues = (currentTarget && Object.keys(currentTarget).length > 0 && 
                            Object.values(currentTarget).some(v => v !== 0 && v !== null && v !== undefined))
                           ? currentTarget 
@@ -48,12 +43,10 @@ export default function Plan() {
     }
   }, [userId, reset]);
   
-  // Reload plans when navigating back to this page (using location)
   useEffect(() => {
     if (userId && location === '/plan') {
       loadPlans(userId).then(() => {
         const { targetPlan: currentTarget, currentPlan: currentCurrent } = useStore.getState();
-        // Use targetPlan if it has values, otherwise default to currentPlan
         const formValues = (currentTarget && Object.keys(currentTarget).length > 0 && 
                            Object.values(currentTarget).some(v => v !== 0 && v !== null && v !== undefined))
                           ? currentTarget 
@@ -63,16 +56,10 @@ export default function Plan() {
     }
   }, [location, userId, reset]);
 
-  // Watch for targetPlan changes (e.g., from auto-apply in chat) and update form
-  // This ensures the form stays in sync with store updates
   useEffect(() => {
-    // Only update if we're on the plan page and targetPlan has non-zero values
     if (location === '/plan' && targetPlan && Object.keys(targetPlan).length > 0) {
-      // Check if targetPlan has any non-zero values
       const hasNonZeroValues = Object.values(targetPlan).some(val => val !== 0 && val !== null && val !== undefined);
       if (hasNonZeroValues) {
-        // Update form when targetPlan changes (e.g., from auto-apply)
-        // Use a small delay to avoid conflicts with other updates
         const timeoutId = setTimeout(() => {
           reset(targetPlan);
         }, 100);
@@ -87,13 +74,7 @@ export default function Plan() {
     try {
       setLoading(true);
       setError(null);
-
-      // Get the form values - these are what the user sees and edits
-      // The form should be synced with targetPlan from store (via useEffect)
-      // So form values should have the latest values including auto-applied ones
       const finalTargetPlan: Record<string, number> = {};
-      
-      // Process all form values - these are the visible values the user sees
       Object.keys(data).forEach((key) => {
         const formVal = data[key];
         if (formVal !== null && formVal !== undefined && formVal !== "") {

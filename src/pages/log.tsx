@@ -227,7 +227,7 @@ export default function Log() {
                                 value={String(watch(key) ?? CATEGORICAL_VARIABLES[key][0].value)}
                                 onValueChange={(v) => setValue(key, parseInt(v))}
                               >
-                                <SelectTrigger className="h-8 w-32">
+                                <SelectTrigger className="h-8 w-full">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
