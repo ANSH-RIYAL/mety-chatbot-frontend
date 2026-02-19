@@ -120,7 +120,7 @@ import {
 
 export default function MySupplements() {
   const [, setLocation] = useLocation();
-  const { userId, setLoading, setError } = useStore();
+  const { userId, setLoading } = useStore();
 
   const { register, handleSubmit, setValue, watch, reset } =
     useForm<Record<string, number>>();
