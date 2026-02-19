@@ -156,7 +156,7 @@ export default function AboutMe() {
 
       try {
         // ✅ Use user/vars endpoint
-        const response = await api.getUserVars(userId);
+        await api.getUserVars(userId);
 
         // Your backend stores profile inside Firestore user document
         // but /user/vars returns:
