@@ -138,7 +138,7 @@ type FormValues = {
 
 export default function AboutMe() {
   const [, setLocation] = useLocation();
-  const { userId, updateProfile, setLoading, setError } = useStore();
+  const { userId, profile, updateProfile, setLoading, setError } = useStore();
 
   const {
     register,
@@ -146,11 +146,28 @@ export default function AboutMe() {
     setValue,
     watch,
     reset,
-  } = useForm<FormValues>();
+  } = useForm<FormValues>({
+    defaultValues: {
+      name: profile?.name ?? "",
+      age: profile?.age ?? undefined,
+      gender: profile?.gender ?? undefined,
+    },
+  });
 
   /* ---------------------------------------------------- */
-  /* Load profile from backend and pre-fill form */
-  /* Backend may return profile and/or age/gender in current_plan; merge both. */
+  /* Sync form with store when profile in store changes (e.g. after loadPlans) */
+  /* ---------------------------------------------------- */
+  useEffect(() => {
+    reset({
+      name: profile?.name ?? "",
+      age: profile?.age ?? undefined,
+      gender: profile?.gender ?? undefined,
+    });
+  }, [profile?.name, profile?.age, profile?.gender, reset]);
+
+  /* ---------------------------------------------------- */
+  /* Load profile from backend and merge into form/store */
+  /* Backend may return profile and/or age/gender in current_plan. */
   /* ---------------------------------------------------- */
   useEffect(() => {
     const loadProfile = async () => {
@@ -158,22 +175,21 @@ export default function AboutMe() {
 
       try {
         const response = await api.getPlan(userId);
-        const profile = response.profile || {};
+        const apiProfile = response.profile || {};
         const plan = response.current_plan as Partial<PlanVariables & { name?: string; age?: number; gender?: number }>;
 
-        // Merge: prefer profile for name; age/gender from profile or current_plan
-        const nameRaw = profile.name ?? plan.name ?? "";
+        const nameRaw = apiProfile.name ?? plan.name ?? "";
         const nameStr = typeof nameRaw === "string" ? nameRaw : "";
-        const age = profile.age ?? plan.age ?? undefined;
-        const gender = profile.gender ?? plan.gender ?? undefined;
+        const age = apiProfile.age ?? plan.age ?? undefined;
+        const gender = apiProfile.gender ?? plan.gender ?? undefined;
 
-        reset({
-          name: nameStr,
-          age,
-          gender,
-        });
-
+        // Only update form if we got at least one value from API (don't overwrite with empty)
         if (nameStr !== "" || age !== undefined || gender !== undefined) {
+          reset({
+            name: nameStr,
+            age,
+            gender,
+          });
           updateProfile({ name: nameStr || undefined, age, gender });
         }
       } catch (err) {
