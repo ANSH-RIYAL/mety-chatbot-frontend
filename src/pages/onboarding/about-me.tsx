@@ -137,7 +137,7 @@ type FormValues = {
 
 export default function AboutMe() {
   const [, setLocation] = useLocation();
-  const { userId, setLoading, setError } = useStore();
+  const { userId, profile, updateProfile, setLoading, setError } = useStore();
 
   const {
     register,
@@ -148,36 +148,32 @@ export default function AboutMe() {
   } = useForm<FormValues>();
 
   /* ---------------------------------------------------- */
-  /* Load profile from backend */
+  /* Load profile from backend and pre-fill form */
   /* ---------------------------------------------------- */
   useEffect(() => {
     const loadProfile = async () => {
       if (!userId) return;
 
       try {
-        // ✅ Use user/vars endpoint
-        await api.getUserVars(userId);
+        const response = await api.getPlan(userId);
+        const loaded = response.profile || {};
 
-        // Your backend stores profile inside Firestore user document
-        // but /user/vars returns:
-        // { user_id, vars_extracted, target_plan }
-        // It does NOT return profile.
+        reset({
+          name: loaded.name ?? "",
+          age: loaded.age ?? undefined,
+          gender: loaded.gender ?? undefined,
+        });
 
-        // So we need to fetch it directly from plan/get
-        // and read from current_plan OR modify backend.
-
-        // Since profile is not returned anywhere,
-        // safest solution is: do not auto-load profile for now.
-        // (Your backend currently doesn't expose it.)
-
-        reset({});
+        if (loaded.name !== undefined || loaded.age !== undefined || loaded.gender !== undefined) {
+          updateProfile(loaded);
+        }
       } catch (err) {
         console.error("[ABOUT ME] Failed to load profile:", err);
       }
     };
 
     loadProfile();
-  }, [userId, reset]);
+  }, [userId, reset, updateProfile]);
 
   /* ---------------------------------------------------- */
   /* Submit */

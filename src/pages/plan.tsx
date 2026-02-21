@@ -170,32 +170,30 @@ export default function Plan() {
     }
   };
 
-  // Reorganized variable order: supplements, diet, exercise/lifestyle grouped together
+  // Show all variables: supplements, diet, exercise (so stored supplements are always visible)
   const getOrderedKeys = (): VariableKey[] => {
     const ordered: VariableKey[] = [
-      // Supplements first
       ...VARIABLE_GROUPS.supplements,
-      // Then diet
       ...VARIABLE_GROUPS.diet,
-      // Then exercise/lifestyle
       ...VARIABLE_GROUPS.exercise,
     ];
-    // Filter to only include keys that exist in OPTIMAL_PLAN
-    const allKeys = ordered.filter(key => key in OPTIMAL_PLAN) as VariableKey[];
-    
-    // Separate into prediction API variables (no asterisk) and non-prediction variables (asterisk)
+    const seen = new Set<string>();
+    const unique: VariableKey[] = [];
+    ordered.forEach(key => {
+      if (!seen.has(key)) {
+        seen.add(key);
+        unique.push(key as VariableKey);
+      }
+    });
     const predictionKeys: VariableKey[] = [];
     const nonPredictionKeys: VariableKey[] = [];
-    
-    allKeys.forEach(key => {
+    unique.forEach(key => {
       if (isPredictionApiVariable(key)) {
         predictionKeys.push(key);
       } else {
         nonPredictionKeys.push(key);
       }
     });
-    
-    // Return prediction API variables first, then non-prediction variables at the bottom
     return [...predictionKeys, ...nonPredictionKeys];
   };
 
