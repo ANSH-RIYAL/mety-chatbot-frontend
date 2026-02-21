@@ -111,16 +111,11 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useStore } from "@/lib/store";
 import * as api from "@/lib/api";
-import {
-  VARIABLE_GROUPS,
-  UNITS,
-  isPredictionApiVariable,
-  VariableKey,
-} from "@/lib/constants";
+import { VARIABLE_GROUPS, UNITS, VariableKey } from "@/lib/constants";
 
 export default function MySupplements() {
   const [, setLocation] = useLocation();
-  const { userId, setLoading } = useStore();
+  const { userId, setLoading, setError } = useStore();
 
   const { register, handleSubmit, setValue, watch, reset } =
     useForm<Record<string, number>>();
@@ -146,14 +141,13 @@ export default function MySupplements() {
       setLoading(true);
 
       const payload: Record<string, number> = {};
-
-      VARIABLE_GROUPS.supplements
-        .filter((key) => isPredictionApiVariable(key as VariableKey))
-        .forEach((key) => {
-          if (data[key] !== undefined) {
-            payload[key] = Number(data[key]);
-          }
-        });
+      VARIABLE_GROUPS.supplements.forEach((key) => {
+        const val = data[key];
+        if (val !== undefined && val !== null && val !== "") {
+          const num = Number(val);
+          if (!isNaN(num)) payload[key] = num;
+        }
+      });
 
       await api.submitOnboarding({
         user_id: userId,
@@ -178,9 +172,7 @@ export default function MySupplements() {
       onNext={handleSubmit(onSubmit)}
     >
       <div className="grid gap-4">
-        {VARIABLE_GROUPS.supplements
-          .filter((key) => isPredictionApiVariable(key as VariableKey))
-          .map((key) => {
+        {VARIABLE_GROUPS.supplements.map((key) => {
             if (key === "multi_vitamins") {
               return (
                 <div key={key} className="flex items-center space-x-2">
