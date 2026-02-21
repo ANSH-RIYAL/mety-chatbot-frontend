@@ -179,14 +179,23 @@ export async function loadPlans(userId: string) {
     useStore.getState().setError(null);
     const response = await api.getPlan(userId);
     
-    // Get profile to ensure age and gender are in plans
-    const profile = useStore.getState().profile;
-    
-    // Ensure age and gender are always in current_plan and target_plan
+    const apiProfile = response.profile || {};
     const currentPlan: any = { ...(response.current_plan || {}) };
     const targetPlan: any = { ...(response.target_plan || {}) };
+
+    // Merge profile from API: response.profile + name/age/gender from current_plan (backend may store them there)
+    const mergedProfile = {
+      ...apiProfile,
+      name: apiProfile.name ?? currentPlan.name,
+      age: apiProfile.age ?? currentPlan.age,
+      gender: apiProfile.gender ?? currentPlan.gender,
+    };
+    if (mergedProfile.name !== undefined || mergedProfile.age !== undefined || mergedProfile.gender !== undefined) {
+      useStore.getState().updateProfile(mergedProfile);
+    }
     
-    // Add age and gender from profile if they exist and aren't already in plans
+    // Ensure age and gender are in plans for prediction/layout
+    const profile = useStore.getState().profile;
     if (profile?.age !== undefined && currentPlan.age === undefined) {
       currentPlan.age = profile.age;
     }
