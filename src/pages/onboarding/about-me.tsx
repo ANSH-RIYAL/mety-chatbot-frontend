@@ -137,7 +137,7 @@ type FormValues = {
 
 export default function AboutMe() {
   const [, setLocation] = useLocation();
-  const { userId, profile, updateProfile, setLoading, setError } = useStore();
+  const { userId, updateProfile, setLoading, setError } = useStore();
 
   const {
     register,

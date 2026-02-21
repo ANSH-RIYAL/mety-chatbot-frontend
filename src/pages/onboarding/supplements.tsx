@@ -111,11 +111,11 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useStore } from "@/lib/store";
 import * as api from "@/lib/api";
-import { VARIABLE_GROUPS, UNITS, VariableKey } from "@/lib/constants";
+import { VARIABLE_GROUPS, UNITS } from "@/lib/constants";
 
 export default function MySupplements() {
   const [, setLocation] = useLocation();
-  const { userId, setLoading, setError } = useStore();
+  const { userId, setLoading } = useStore();
 
   const { register, handleSubmit, setValue, watch, reset } =
     useForm<Record<string, number>>();
