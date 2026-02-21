@@ -128,6 +128,7 @@ import {
 } from "@/components/ui/select";
 import { useStore } from "@/lib/store";
 import * as api from "@/lib/api";
+import type { PlanVariables } from "@/lib/constants";
 
 type FormValues = {
   name?: string;
@@ -149,6 +150,7 @@ export default function AboutMe() {
 
   /* ---------------------------------------------------- */
   /* Load profile from backend and pre-fill form */
+  /* Backend may return profile and/or age/gender in current_plan; merge both. */
   /* ---------------------------------------------------- */
   useEffect(() => {
     const loadProfile = async () => {
@@ -156,16 +158,23 @@ export default function AboutMe() {
 
       try {
         const response = await api.getPlan(userId);
-        const loaded = response.profile || {};
+        const profile = response.profile || {};
+        const plan = response.current_plan as Partial<PlanVariables & { name?: string; age?: number; gender?: number }>;
+
+        // Merge: prefer profile for name; age/gender from profile or current_plan
+        const nameRaw = profile.name ?? plan.name ?? "";
+        const nameStr = typeof nameRaw === "string" ? nameRaw : "";
+        const age = profile.age ?? plan.age ?? undefined;
+        const gender = profile.gender ?? plan.gender ?? undefined;
 
         reset({
-          name: loaded.name ?? "",
-          age: loaded.age ?? undefined,
-          gender: loaded.gender ?? undefined,
+          name: nameStr,
+          age,
+          gender,
         });
 
-        if (loaded.name !== undefined || loaded.age !== undefined || loaded.gender !== undefined) {
-          updateProfile(loaded);
+        if (nameStr !== "" || age !== undefined || gender !== undefined) {
+          updateProfile({ name: nameStr || undefined, age, gender });
         }
       } catch (err) {
         console.error("[ABOUT ME] Failed to load profile:", err);
@@ -199,6 +208,12 @@ export default function AboutMe() {
               ? data.gender
               : undefined,
         },
+      });
+
+      updateProfile({
+        name: data.name,
+        age: data.age,
+        ...(typeof data.gender === "number" ? { gender: data.gender } : {}),
       });
 
       setLocation("/onboarding/supplements");
