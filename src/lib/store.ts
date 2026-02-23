@@ -163,11 +163,16 @@ export const useStore = create<AppState>()(
       name: "mety-chatbot-storage",
       partialize: (state) => ({
         userId: state.userId,
-        profile: state.profile,
-        targetPlan: state.targetPlan,
-        // Only persist chat history for current user
+        // Do NOT persist profile/plans: they are per-user and must come from API
+        // so we never show another user's data when switching or after refresh
         chatHistory: state.chatHistory.filter(m => m.user_id === state.userId),
       }),
+      onRehydrateStorage: () => (state) => {
+        // When app loads with a stored userId, load that user's data from API
+        if (state?.userId) {
+          loadPlans(state.userId);
+        }
+      },
     }
   )
 );
