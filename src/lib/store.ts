@@ -163,16 +163,11 @@ export const useStore = create<AppState>()(
       name: "mety-chatbot-storage",
       partialize: (state) => ({
         userId: state.userId,
-        // Do NOT persist profile/plans: they are per-user and must come from API
-        // so we never show another user's data when switching or after refresh
+        profile: state.profile,
+        targetPlan: state.targetPlan,
+        // Only persist chat history for current user
         chatHistory: state.chatHistory.filter(m => m.user_id === state.userId),
       }),
-      onRehydrateStorage: () => (state) => {
-        // When app loads with a stored userId, load that user's data from API
-        if (state?.userId) {
-          loadPlans(state.userId);
-        }
-      },
     }
   )
 );
@@ -184,23 +179,14 @@ export async function loadPlans(userId: string) {
     useStore.getState().setError(null);
     const response = await api.getPlan(userId);
     
-    const apiProfile = response.profile || {};
+    // Get profile to ensure age and gender are in plans
+    const profile = useStore.getState().profile;
+    
+    // Ensure age and gender are always in current_plan and target_plan
     const currentPlan: any = { ...(response.current_plan || {}) };
     const targetPlan: any = { ...(response.target_plan || {}) };
-
-    // Merge profile from API: response.profile + name/age/gender from current_plan (backend may store them there)
-    const mergedProfile = {
-      ...apiProfile,
-      name: apiProfile.name ?? currentPlan.name,
-      age: apiProfile.age ?? currentPlan.age,
-      gender: apiProfile.gender ?? currentPlan.gender,
-    };
-    if (mergedProfile.name !== undefined || mergedProfile.age !== undefined || mergedProfile.gender !== undefined) {
-      useStore.getState().updateProfile(mergedProfile);
-    }
     
-    // Ensure age and gender are in plans for prediction/layout
-    const profile = useStore.getState().profile;
+    // Add age and gender from profile if they exist and aren't already in plans
     if (profile?.age !== undefined && currentPlan.age === undefined) {
       currentPlan.age = profile.age;
     }

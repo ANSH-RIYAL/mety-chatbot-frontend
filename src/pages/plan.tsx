@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
 import { useStore, loadPlans } from "@/lib/store";
-import { UNITS, VariableKey, isPredictionApiVariable, VARIABLE_GROUPS, CATEGORICAL_VARIABLES, isCategoricalVariable } from "@/lib/constants";
+import { OPTIMAL_PLAN, UNITS, VariableKey, isPredictionApiVariable, VARIABLE_GROUPS, CATEGORICAL_VARIABLES, isCategoricalVariable } from "@/lib/constants";
 import { Save, ArrowRight } from "lucide-react";
 import { Shell } from "@/components/layout/Shell";
 import { applyTargetToCurrent } from "@/lib/api";
@@ -170,30 +170,32 @@ export default function Plan() {
     }
   };
 
-  // Show all variables: supplements, diet, exercise (so stored supplements are always visible)
+  // Reorganized variable order: supplements, diet, exercise/lifestyle grouped together
   const getOrderedKeys = (): VariableKey[] => {
     const ordered: VariableKey[] = [
+      // Supplements first
       ...VARIABLE_GROUPS.supplements,
+      // Then diet
       ...VARIABLE_GROUPS.diet,
+      // Then exercise/lifestyle
       ...VARIABLE_GROUPS.exercise,
     ];
-    const seen = new Set<string>();
-    const unique: VariableKey[] = [];
-    ordered.forEach(key => {
-      if (!seen.has(key)) {
-        seen.add(key);
-        unique.push(key as VariableKey);
-      }
-    });
+    // Filter to only include keys that exist in OPTIMAL_PLAN
+    const allKeys = ordered.filter(key => key in OPTIMAL_PLAN) as VariableKey[];
+    
+    // Separate into prediction API variables (no asterisk) and non-prediction variables (asterisk)
     const predictionKeys: VariableKey[] = [];
     const nonPredictionKeys: VariableKey[] = [];
-    unique.forEach(key => {
+    
+    allKeys.forEach(key => {
       if (isPredictionApiVariable(key)) {
         predictionKeys.push(key);
       } else {
         nonPredictionKeys.push(key);
       }
     });
+    
+    // Return prediction API variables first, then non-prediction variables at the bottom
     return [...predictionKeys, ...nonPredictionKeys];
   };
 

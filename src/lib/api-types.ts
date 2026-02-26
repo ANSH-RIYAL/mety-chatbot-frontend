@@ -21,7 +21,6 @@ export interface OnboardingSubmitResponse {
 // GET /plan/get?user_id=<id>
 export interface GetPlanResponse {
   user_id: string;
-  profile?: Partial<UserProfile>;
   current_plan: Partial<PlanVariables>;
   target_plan: Partial<PlanVariables>;
   optimal_plan: Partial<PlanVariables>;
