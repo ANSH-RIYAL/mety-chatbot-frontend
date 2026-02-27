@@ -34,12 +34,17 @@ export default function Log() {
   });
 
   useEffect(() => {
+    // Load previous logs (for now, we'll just show a placeholder)
+    // In production, this would fetch from backend or Firestore
     setPreviousLogs([]);
+    
+    // Reload plans when navigating to log page to ensure we have latest values
     if (userId) {
       loadPlans(userId);
     }
   }, [userId]);
 
+  // Pre-fill form with current plan values (user's baseline from onboarding)
   useEffect(() => {
     if (currentPlan && Object.keys(currentPlan).length > 0) {
       Object.keys(currentPlan).forEach((key) => {
@@ -66,6 +71,7 @@ export default function Log() {
       setLoading(true);
       setError(null);
 
+      // Convert form data to log payload (only non-empty values)
       const log: Record<string, number> = {};
       Object.keys(OPTIMAL_PLAN).forEach((key) => {
         const keyStr = key as string;
@@ -89,6 +95,7 @@ export default function Log() {
         adherence: response.adherence,
       }]);
 
+      // Reset form but re-fill with current plan values
       const resetValues: Record<string, number> = {};
       Object.keys(currentPlan).forEach((key) => {
         const value = currentPlan[key as keyof typeof currentPlan];
@@ -112,138 +119,144 @@ export default function Log() {
   return (
     <Shell>
       <div className="p-6 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-primary">Daily Log</h1>
-          <p className="text-muted-foreground">
-            Track your adherence to the plan
-          </p>
-        </div>
-
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="period_start">Period Start</Label>
-                <Input
-                  id="period_start"
-                  type="date"
-                  value={periodStart}
-                  onChange={(e) => setPeriodStart(e.target.value)}
-                  className="h-8 w-40"
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="period_end">Period End</Label>
-                <Input
-                  id="period_end"
-                  type="date"
-                  value={periodEnd}
-                  onChange={(e) => setPeriodEnd(e.target.value)}
-                  className="h-8 w-40"
-                  required
-                />
-              </div>
+            <div>
+              <h1 className="text-3xl font-bold text-primary">Daily Log</h1>
+              <p className="text-muted-foreground">
+                Track your adherence to the plan
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Please enter average intake over your window in the same unit as mentioned beside the variable
-            </p>
-          </CardContent>
-        </Card>
 
-        {adherence && (
-          <div className="grid grid-cols-3 gap-4">
-            <Card className="bg-green-50 border-green-100">
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-primary">
-                  {(adherence.total * 100).toFixed(0)}%
-                </div>
-                <div className="text-xs text-muted-foreground">Total Adherence</div>
-              </CardContent>
-            </Card>
+            {/* Date inputs */}
             <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-primary">
-                  {(adherence.diet * 100).toFixed(0)}%
-                </div>
-                <div className="text-xs text-muted-foreground">Diet Adherence</div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <div className="text-2xl font-bold text-primary">
-                  {(adherence.supplement * 100).toFixed(0)}%
-                </div>
-                <div className="text-xs text-muted-foreground">Supplement Adherence</div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {previousLogs.length > 0 && (
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="font-semibold mb-4">Previous Logs</h3>
-              <div className="space-y-2">
-                {previousLogs.map((log, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-2 border rounded">
-                    <span className="text-sm">
-                      {log.period_start} to {log.period_end}
-                    </span>
-                    <span className="text-sm font-medium">
-                      {(log.adherence.total * 100).toFixed(0)}% adherence
-                    </span>
+              <CardContent className="p-6 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="period_start">Period Start</Label>
+                    <Input
+                      id="period_start"
+                      type="date"
+                      value={periodStart}
+                      onChange={(e) => setPeriodStart(e.target.value)}
+                      className="h-8 w-40"
+                      required
+                    />
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  <div className="grid gap-2">
+                    <Label htmlFor="period_end">Period End</Label>
+                    <Input
+                      id="period_end"
+                      type="date"
+                      value={periodEnd}
+                      onChange={(e) => setPeriodEnd(e.target.value)}
+                      className="h-8 w-40"
+                      required
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Please enter average intake over your window in the same unit as mentioned beside the variable
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Log Values</h2>
-              <Button onClick={handleSubmit(onSubmit)}>
-                <Save className="h-4 w-4 mr-2" />
-                Submit Log
-              </Button>
-            </div>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[250px]">Variable</TableHead>
-                    <TableHead className="w-[80px]">Target</TableHead>
-                    <TableHead className="w-[200px]">Log Value</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {keys.map((key) => (
-                    <TableRow key={key}>
-                      <TableCell className="font-medium">
-                        <div className="flex flex-col">
-                          <span className="capitalize">{key.replace(/_/g, " ")}</span>
-                          <span className="text-xs text-muted-foreground">{UNITS[key]}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {typeof targetPlan[key] === 'number' && targetPlan[key] !== 0
-                          ? targetPlan[key]!.toLocaleString(undefined, { maximumFractionDigits: 2 }) 
-                          : "-"}
-                      </TableCell>
-                      <TableCell>
-                        {isCategoricalVariable(key) ? (
-                          (() => {
-                            const watched = watch(key);
-                            const selectValue =
-                              watched === undefined || watched === null
-                                ? undefined
-                                : String(watched);
-                            return (
+            {/* Adherence display */}
+            {adherence && (
+              <div className="grid grid-cols-3 gap-4">
+                <Card className="bg-green-50 border-green-100">
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold text-primary">
+                      {(adherence.total * 100).toFixed(0)}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">Total Adherence</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold text-primary">
+                      {(adherence.diet * 100).toFixed(0)}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">Diet Adherence</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold text-primary">
+                      {(adherence.supplement * 100).toFixed(0)}%
+                    </div>
+                    <div className="text-xs text-muted-foreground">Supplement Adherence</div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {/* Previous logs */}
+            {previousLogs.length > 0 && (
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-semibold mb-4">Previous Logs</h3>
+                  <div className="space-y-2">
+                    {previousLogs.map((log, idx) => (
+                      <div key={idx} className="flex items-center justify-between p-2 border rounded">
+                        <span className="text-sm">
+                          {log.period_start} to {log.period_end}
+                        </span>
+                        <span className="text-sm font-medium">
+                          {(log.adherence.total * 100).toFixed(0)}% adherence
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Log form */}
+            <Card>
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold">Log Values</h2>
+                  <Button onClick={handleSubmit(onSubmit)}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Submit Log
+                  </Button>
+                </div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[250px]">Variable</TableHead>
+                        <TableHead className="w-[80px]">Target</TableHead>
+                        <TableHead className="w-[200px]">Log Value</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {keys.map((key) => (
+                        <TableRow key={key}>
+                          <TableCell className="font-medium">
+                            <div className="flex flex-col">
+                              <span className="capitalize">{key.replace(/_/g, " ")}</span>
+                              <span className="text-xs text-muted-foreground">{UNITS[key]}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {typeof targetPlan[key] === 'number' 
+                              ? targetPlan[key]!.toLocaleString(undefined, { maximumFractionDigits: 2 }) 
+                              : (targetPlan[key] ?? "-")}
+                          </TableCell>
+                          <TableCell>
+                            {isCategoricalVariable(key) ? (
+                              (() => {
+                                const watched = watch(key);
+                                const selectValue =
+                                  watched === undefined || watched === null
+                                    ? undefined
+                                    : String(watched);
+                                return (
                               <Select
                                 value={selectValue}
-                                onValueChange={(v) => setValue(key, parseInt(v, 10), { shouldDirty: true })}
+                                onValueChange={(v) =>
+                                  setValue(key, parseInt(v, 10), { shouldDirty: true })
+                                }
                               >
                                 <SelectTrigger className="h-8 w-24">
                                   <SelectValue placeholder="Select..." />
@@ -256,28 +269,28 @@ export default function Log() {
                                   ))}
                                 </SelectContent>
                               </Select>
-                            );
-                          })()
-                        ) : (
-                          <Input 
-                            type="number" 
-                            step="0.1"
-                            className="h-8 w-24"
-                            value={watch(key) ?? ""}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setValue(key, val === "" ? undefined as any : parseFloat(val), { shouldDirty: true });
-                            }}
-                          />
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        </Card>
+                                );
+                              })()
+                            ) : (
+                              <Input 
+                                type="number" 
+                                step="0.1"
+                                className="h-8 w-24"
+                                value={watch(key) ?? ""}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setValue(key, val === "" ? undefined as any : parseFloat(val), { shouldDirty: true });
+                                }}
+                              />
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </Card>
       </div>
     </Shell>
   );
