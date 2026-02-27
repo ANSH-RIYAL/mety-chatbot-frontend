@@ -1,4 +1,4 @@
- useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,24 +23,28 @@ interface LogEntry {
 }
 
 export default function Log() {
-  const { userId, currentPlan, targetPlan, setLoading, setError } = useStore();
+  const { userId, currentPlan, setLoading, setError } = useStore();
   const [adherence, setAdherence] = useState<{ total: number; diet: number; supplement: number } | null>(null);
   const [previousLogs, setPreviousLogs] = useState<LogEntry[]>([]);
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
 
-  const { handleSubmit, reset, setValue, watch } = useForm<Record<string, number>>({
+  const { register, handleSubmit, reset, setValue, watch } = useForm<Record<string, number>>({
     defaultValues: {}
   });
 
   useEffect(() => {
+    // Load previous logs (for now, we'll just show a placeholder)
+    // In production, this would fetch from backend or Firestore
     setPreviousLogs([]);
     
+    // Reload plans when navigating to log page to ensure we have latest values
     if (userId) {
       loadPlans(userId);
     }
   }, [userId]);
 
+  // Pre-fill form with current plan values (user's baseline from onboarding)
   useEffect(() => {
     if (currentPlan && Object.keys(currentPlan).length > 0) {
       Object.keys(currentPlan).forEach((key) => {
@@ -67,6 +71,7 @@ export default function Log() {
       setLoading(true);
       setError(null);
 
+      // Convert form data to log payload (only non-empty values)
       const log: Record<string, number> = {};
       Object.keys(OPTIMAL_PLAN).forEach((key) => {
         const keyStr = key as string;
@@ -90,6 +95,7 @@ export default function Log() {
         adherence: response.adherence,
       }]);
 
+      // Reset form but re-fill with current plan values
       const resetValues: Record<string, number> = {};
       Object.keys(currentPlan).forEach((key) => {
         const value = currentPlan[key as keyof typeof currentPlan];
@@ -120,6 +126,7 @@ export default function Log() {
               </p>
             </div>
 
+            {/* Date inputs */}
             <Card>
               <CardContent className="p-6 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-end gap-4">
@@ -152,6 +159,7 @@ export default function Log() {
               </CardContent>
             </Card>
 
+            {/* Adherence display */}
             {adherence && (
               <div className="grid grid-cols-3 gap-4">
                 <Card className="bg-green-50 border-green-100">
@@ -181,6 +189,7 @@ export default function Log() {
               </div>
             )}
 
+            {/* Previous logs */}
             {previousLogs.length > 0 && (
               <Card>
                 <CardContent className="p-6">
@@ -201,6 +210,7 @@ export default function Log() {
               </Card>
             )}
 
+            {/* Log form */}
             <Card>
               <div className="p-6">
                 <div className="flex justify-between items-center mb-4">
@@ -229,9 +239,9 @@ export default function Log() {
                             </div>
                           </TableCell>
                           <TableCell className="font-mono text-xs">
-                            {typeof targetPlan[key] === 'number' && targetPlan[key] !== 0
-                              ? targetPlan[key]!.toLocaleString(undefined, { maximumFractionDigits: 2 }) 
-                              : "-"}
+                            {typeof currentPlan[key] === 'number' 
+                              ? currentPlan[key]!.toLocaleString(undefined, { maximumFractionDigits: 2 }) 
+                              : (currentPlan[key] ?? "-")}
                           </TableCell>
                           <TableCell>
                             {isCategoricalVariable(key) ? (
