@@ -31,7 +31,8 @@ export default function MyExercise() {
           const exerciseData: Record<string, number> = {};
           exerciseKeys.forEach((key) => {
             const value = response.current_plan[key as keyof typeof response.current_plan];
-            if (value !== undefined && value !== null) {
+            // Only load non-zero values - skip 0, undefined, null
+            if (value !== undefined && value !== null && value !== 0) {
               exerciseData[key] = Number(value);
             }
           });
@@ -72,7 +73,6 @@ export default function MyExercise() {
         payload,
       });
 
-      // Final step - go to plan page
       setLocation("/plan");
     } catch (error) {
       console.error("[EXERCISE] Failed to submit:", error);
