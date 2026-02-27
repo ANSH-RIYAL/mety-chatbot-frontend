@@ -1,4 +1,3 @@
-
 import { useLocation } from "wouter";
 import { useForm, Controller } from "react-hook-form";
 import { useEffect } from "react";
@@ -36,30 +35,27 @@ export default function AboutMe() {
   /* Load profile from backend */
   /* ---------------------------------------------------- */
   useEffect(() => {
-  const loadProfile = async () => {
-    if (!userId) return;
+    const loadProfile = async () => {
+      if (!userId) return;
 
-    try {
-      const response = await api.getPlan(userId);
+      try {
+        const response = await api.getPlan(userId);
 
-      // 👇 ADD THIS LINE
-      console.log("FULL RESPONSE FROM getPlan:", response);
-
-      if (response?.profile) {
+        // Prefill using current_plan (adjust this if your backend uses target_plan instead)
+        const plan = response.current_plan || {};
         reset({
-          name: response.profile.name ?? "",
-          age: response.profile.age ?? undefined,
-          gender: response.profile.gender ?? undefined,
+          name: plan.name ?? "",
+          age: plan.age ?? undefined,
+          gender: plan.gender ?? undefined,
         });
+
+      } catch (err) {
+        console.error("[ABOUT ME] Failed to load profile:", err);
       }
+    };
 
-    } catch (err) {
-      console.error("[ABOUT ME] Failed to load profile:", err);
-    }
-  };
-
-  loadProfile();
-}, [userId, reset]);
+    loadProfile();
+  }, [userId, reset]);
 
   /* ---------------------------------------------------- */
   /* Submit */
@@ -133,7 +129,6 @@ export default function AboutMe() {
         {/* Gender */}
         <div className="grid gap-2">
           <Label>Gender</Label>
-
           <Controller
             control={control}
             name="gender"
