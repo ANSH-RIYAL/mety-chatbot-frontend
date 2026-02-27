@@ -14,35 +14,21 @@ import { applyTargetToCurrent } from "@/lib/api";
 
 export default function Plan() {
   const [location] = useLocation();
-  const { userId, currentPlan, targetPlan, optimalPlan, updateTargetPlan, setLoading, setError, latestDiffDetected, latestSuggestedPlan, explicitTargetKeys, markExplicitTargetKey, clearExplicitTargetKeys } = useStore();
-
-  const normalizeCategoricalDefaults = (values: Record<string, any>) => {
-    const next = { ...(values || {}) };
-    // Backend expands plans with 0s for all vars; for categorical dropdowns we want "unset" (placeholder)
-    // unless user explicitly chooses a value.
-    Object.keys(CATEGORICAL_VARIABLES).forEach((k) => {
-      if (next[k] === 0 && !explicitTargetKeys.includes(k)) delete next[k];
-    });
-    return next;
-  };
+  const { userId, currentPlan, targetPlan, optimalPlan, updateTargetPlan, setLoading, setError, latestDiffDetected, latestSuggestedPlan } = useStore();
 
   const normalizeTargetDefaults = (values: Record<string, any>) => {
-    const next = normalizeCategoricalDefaults(values);
-    // For the Target form, treat backend filler 0s as "unset" to avoid clumpy UI,
-    // but preserve 0 if the user explicitly set that key.
+    const next = { ...(values || {}) };
     Object.keys(next).forEach((k) => {
-      if (next[k] === 0 && !explicitTargetKeys.includes(k)) delete next[k];
+      if (next[k] === 0) delete next[k];
     });
     return next;
   };
 
   const getInitialFormValues = () => {
-    // Show Target inputs based on targetPlan only; current values are already visible in the "Current" column.
-    // This keeps the Target column clean (no wall of 0s).
     return normalizeTargetDefaults((targetPlan || {}) as any);
   };
 
-  const { register, handleSubmit, getValues, reset, setValue, watch, formState } = useForm({
+  const { handleSubmit, getValues, reset, setValue, watch, formState } = useForm({
     defaultValues: getInitialFormValues()
   });
 
@@ -50,7 +36,6 @@ export default function Plan() {
     if (userId) {
       loadPlans(userId).then(() => {
         const { targetPlan: currentTarget } = useStore.getState();
-        // Always populate the Target form from targetPlan (cleaned), not currentPlan.
         reset(normalizeTargetDefaults((currentTarget || {}) as any));
       });
     }
@@ -60,7 +45,6 @@ export default function Plan() {
     if (userId && location === '/plan') {
       loadPlans(userId).then(() => {
         const { targetPlan: currentTarget } = useStore.getState();
-        // Always populate the Target form from targetPlan (cleaned), not currentPlan.
         reset(normalizeTargetDefaults((currentTarget || {}) as any));
       });
     }
@@ -90,9 +74,7 @@ export default function Plan() {
         if (formVal !== null && formVal !== undefined && formVal !== "") {
           const numVal = Number(formVal);
           if (!isNaN(numVal)) {
-            // Only include 0 when the user explicitly edited that key.
-            // This avoids saving backend filler 0s.
-            const isExplicit = explicitTargetKeys.includes(key) || !!(formState.dirtyFields as any)?.[key];
+            const isExplicit = !!(formState.dirtyFields as any)?.[key];
             if (numVal !== 0 || isExplicit) {
               finalTargetPlan[key as VariableKey] = numVal;
             }
@@ -103,7 +85,6 @@ export default function Plan() {
       console.log("[PLAN] Form data:", data);
       console.log("[PLAN] Final targetPlan to save:", finalTargetPlan);
 
-      // Diff to backend: include explicit 0s too
       const targetDiff: Record<string, number> = {};
       Object.keys(finalTargetPlan).forEach((key) => {
         const val = finalTargetPlan[key as VariableKey];
@@ -114,32 +95,19 @@ export default function Plan() {
       
       console.log("[PLAN] Saving target plan to backend:", targetDiff);
       
-      // Always update target plan first (even if empty, to ensure backend has latest state)
       await updateTargetPlan(targetDiff);
-      
-      // Reload to get latest from backend
       await loadPlans(userId);
-      
-      // Now copy target plan to current plan (save target to current)
-      // Use the updated target plan from backend
       await applyTargetToCurrent(userId);
-      
-      // Reload plans again to get updated current plan
       await loadPlans(userId);
       
-      // Reset form to current plan (since target is now applied to current)
-      const { currentPlan: newCurrentPlan } = useStore.getState();
-      reset(normalizeCategoricalDefaults((newCurrentPlan || {}) as any));
+      const { currentPlan: newCurrentPlan, setPlans, optimalPlan: newOptimalPlan } = useStore.getState();
+      reset(normalizeTargetDefaults((newCurrentPlan || {}) as any));
       
-      // Update store to reflect that target plan is now empty (after apply)
-      const { setPlans } = useStore.getState();
-      const { optimalPlan: newOptimalPlan } = useStore.getState();
       setPlans({
         currentPlan: newCurrentPlan,
-        targetPlan: {}, // Target plan is cleared after apply
+        targetPlan: {},
         optimalPlan: newOptimalPlan,
       });
-      clearExplicitTargetKeys();
     } catch (error) {
       console.error("[PLAN] Failed to save:", error);
       setError(error instanceof Error ? error.message : "Failed to save");
@@ -153,7 +121,6 @@ export default function Plan() {
     if (!userId) return;
 
     const val = getValues(key);
-    // Filter out null, undefined, and NaN (val is already a number from form)
     if (val === undefined || val === null || isNaN(Number(val))) {
       return;
     }
@@ -163,7 +130,7 @@ export default function Plan() {
       const numVal = Number(val);
       await updateTargetPlan({ [key]: numVal });
       await loadPlans(userId);
-      reset(normalizeCategoricalDefaults((targetPlan || {}) as any));
+      reset(normalizeTargetDefaults((targetPlan || {}) as any));
     } catch (error) {
       console.error("[PLAN] Failed to apply:", error);
       alert("Failed to apply change. Please try again.");
@@ -172,20 +139,14 @@ export default function Plan() {
     }
   };
 
-  // Reorganized variable order: supplements, diet, exercise/lifestyle grouped together
   const getOrderedKeys = (): VariableKey[] => {
     const ordered: VariableKey[] = [
-      // Supplements first
       ...VARIABLE_GROUPS.supplements,
-      // Then diet
       ...VARIABLE_GROUPS.diet,
-      // Then exercise/lifestyle
       ...VARIABLE_GROUPS.exercise,
     ];
-    // Filter to only include keys that exist in OPTIMAL_PLAN
     const allKeys = ordered.filter(key => key in OPTIMAL_PLAN) as VariableKey[];
     
-    // Separate into prediction API variables (no asterisk) and non-prediction variables (asterisk)
     const predictionKeys: VariableKey[] = [];
     const nonPredictionKeys: VariableKey[] = [];
     
@@ -197,7 +158,6 @@ export default function Plan() {
       }
     });
     
-    // Return prediction API variables first, then non-prediction variables at the bottom
     return [...predictionKeys, ...nonPredictionKeys];
   };
 
@@ -206,141 +166,131 @@ export default function Plan() {
   return (
     <Shell>
       <div className="p-6 space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-primary">My Plan</h1>
-                <p className="text-muted-foreground">
-                  Review and adjust your target plan
-                </p>
-              </div>
-            </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-primary">My Plan</h1>
+            <p className="text-muted-foreground">
+              Review and adjust your target plan
+            </p>
+          </div>
+        </div>
 
-            <Card>
-              {/* Action buttons - compact row, wraps on small screens */}
-              <div className="p-4 border-b flex flex-wrap gap-2 sm:justify-end">
-                {latestDiffDetected && Object.keys(latestDiffDetected).length > 0 && (
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      if (!userId) return;
-                      try {
-                        setLoading(true);
-                        // Apply diff_detected to target plan (save to backend)
-                        await updateTargetPlan(latestDiffDetected);
-                        await loadPlans(userId);
-                        reset(normalizeCategoricalDefaults({ ...targetPlan, ...latestDiffDetected } as any));
-                      } catch (error) {
-                        console.error("[PLAN] Failed to apply extracted variables:", error);
-                        alert("Failed to apply extracted variables");
-                      } finally {
-                        setLoading(false);
+        <Card>
+          <div className="p-4 border-b flex flex-wrap gap-2 sm:justify-end">
+            {latestDiffDetected && Object.keys(latestDiffDetected).length > 0 && (
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!userId) return;
+                  try {
+                    setLoading(true);
+                    await updateTargetPlan(latestDiffDetected);
+                    await loadPlans(userId);
+                    reset(normalizeTargetDefaults({ ...targetPlan, ...latestDiffDetected } as any));
+                  } catch (error) {
+                    console.error("[PLAN] Failed to apply extracted variables:", error);
+                    alert("Failed to apply extracted variables");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                Apply Extracted Variables
+              </Button>
+            )}
+            {latestSuggestedPlan && Object.keys(latestSuggestedPlan).length > 0 && (
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!userId) return;
+                  try {
+                    setLoading(true);
+                    const { targetPlan: currentTarget, setPlans } = useStore.getState();
+                    const newTargetPlan = { ...currentTarget, ...latestSuggestedPlan };
+                    
+                    setPlans({
+                      currentPlan: useStore.getState().currentPlan,
+                      targetPlan: newTargetPlan,
+                      optimalPlan: useStore.getState().optimalPlan,
+                    });
+                    
+                    reset(normalizeTargetDefaults(newTargetPlan as any));
+                    
+                    const targetDiff: Record<string, number> = {};
+                    Object.keys(newTargetPlan).forEach((key) => {
+                      const val = newTargetPlan[key as VariableKey];
+                      if (val !== undefined && val !== null && val !== 0) {
+                        targetDiff[key] = Number(val);
                       }
-                    }}
-                  >
-                    Apply Extracted Variables
-                  </Button>
-                )}
-                {latestSuggestedPlan && Object.keys(latestSuggestedPlan).length > 0 && (
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      if (!userId) return;
-                      try {
-                        setLoading(true);
-                        // Step 1: Update frontend state (visible UI) first
-                        const { targetPlan: currentTarget, setPlans } = useStore.getState();
-                        const newTargetPlan = { ...currentTarget, ...latestSuggestedPlan };
-                        
-                        // Update frontend state immediately (visible side)
-                        setPlans({
-                          currentPlan: useStore.getState().currentPlan,
-                          targetPlan: newTargetPlan,
-                          optimalPlan: useStore.getState().optimalPlan,
-                        });
-                        
-                        // Update form with new target plan (visible UI)
-                        reset(normalizeCategoricalDefaults(newTargetPlan as any));
-                        
-                        // Step 2: Then save to backend
-                        // Filter to only non-zero values for the diff
-                        const targetDiff: Record<string, number> = {};
-                        Object.keys(newTargetPlan).forEach((key) => {
-                          const val = newTargetPlan[key as VariableKey];
-                          if (val !== undefined && val !== null && val !== 0) {
-                            targetDiff[key] = Number(val);
-                          }
-                        });
-                        
-                        // Save to backend
-                        await updateTargetPlan(targetDiff);
-                        await loadPlans(userId);
-                      } catch (error) {
-                        console.error("[PLAN] Failed to apply recommended plan:", error);
-                        alert("Failed to apply recommended plan");
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
-                  >
-                    Apply Recommended Plan
-                  </Button>
-                )}
-                <Button onClick={handleSubmit(onSaveAll)} size="sm">
-                  <Save className="h-4 w-4 mr-2" />
-                  Save All Targets
-                </Button>
-              </div>
-              <div className="overflow-x-auto w-full">
-                <Table className="w-full" style={{ minWidth: '800px' }}>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[160px]">Variable</TableHead>
-                      <TableHead className="w-[60px]">Optimal</TableHead>
-                      <TableHead className="w-[60px]">Current</TableHead>
-                      <TableHead className="w-[120px]">Target</TableHead>
-                      <TableHead className="w-[80px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {keys.map((key) => {
-                      const isPredictionVar = isPredictionApiVariable(key);
-                      return (
-                        <TableRow key={key}>
-                          <TableCell className="font-medium">
-                            <div className="flex flex-col">
-                              <span className="capitalize">
-                                {key.replace(/_/g, " ")}
-                                {!isPredictionVar && <span className="text-muted-foreground ml-1">*</span>}
-                              </span>
-                              <span className="text-xs text-muted-foreground">{UNITS[key]}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground font-mono text-xs">
-                            {typeof optimalPlan[key] === 'number' 
-                              ? optimalPlan[key]!.toLocaleString(undefined, { maximumFractionDigits: 2 }) 
-                              : (optimalPlan[key] ?? "-")}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">
-                            {typeof currentPlan[key] === 'number' 
-                              ? currentPlan[key]!.toLocaleString(undefined, { maximumFractionDigits: 2 }) 
-                              : (currentPlan[key] ?? "-")}
-                          </TableCell>
-                          <TableCell className="w-[120px]">
-                            {isCategoricalVariable(key) ? (
-                              (() => {
-                                const watched = watch(key);
-                                const selectValue =
-                                  watched === undefined || watched === null
-                                    ? undefined
-                                    : String(watched);
-                                return (
+                    });
+                    
+                    await updateTargetPlan(targetDiff);
+                    await loadPlans(userId);
+                  } catch (error) {
+                    console.error("[PLAN] Failed to apply recommended plan:", error);
+                    alert("Failed to apply recommended plan");
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+              >
+                Apply Recommended Plan
+              </Button>
+            )}
+            <Button onClick={handleSubmit(onSaveAll)} size="sm">
+              <Save className="h-4 w-4 mr-2" />
+              Save All Targets
+            </Button>
+          </div>
+          <div className="overflow-x-auto w-full">
+            <Table className="w-full" style={{ minWidth: '800px' }}>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[160px]">Variable</TableHead>
+                  <TableHead className="w-[60px]">Optimal</TableHead>
+                  <TableHead className="w-[60px]">Current</TableHead>
+                  <TableHead className="w-[120px]">Target</TableHead>
+                  <TableHead className="w-[80px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {keys.map((key) => {
+                  const isPredictionVar = isPredictionApiVariable(key);
+                  return (
+                    <TableRow key={key}>
+                      <TableCell className="font-medium">
+                        <div className="flex flex-col">
+                          <span className="capitalize">
+                            {key.replace(/_/g, " ")}
+                            {!isPredictionVar && <span className="text-muted-foreground ml-1">*</span>}
+                          </span>
+                          <span className="text-xs text-muted-foreground">{UNITS[key]}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground font-mono text-xs">
+                        {typeof optimalPlan[key] === 'number' 
+                          ? optimalPlan[key]!.toLocaleString(undefined, { maximumFractionDigits: 2 }) 
+                          : (optimalPlan[key] ?? "-")}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {typeof currentPlan[key] === 'number' 
+                          ? currentPlan[key]!.toLocaleString(undefined, { maximumFractionDigits: 2 }) 
+                          : (currentPlan[key] ?? "-")}
+                      </TableCell>
+                      <TableCell className="w-[120px]">
+                        {isCategoricalVariable(key) ? (
+                          (() => {
+                            const watched = watch(key);
+                            const selectValue =
+                              watched === undefined || watched === null
+                                ? undefined
+                                : String(watched);
+                            return (
                               <Select
                                 value={selectValue}
-                                onValueChange={(v) =>
-                                  (markExplicitTargetKey(key), setValue(key, parseInt(v, 10), { shouldDirty: true }))
-                                }
+                                onValueChange={(v) => setValue(key, parseInt(v, 10), { shouldDirty: true })}
                               >
                                 <SelectTrigger className="h-8 w-24">
                                   <SelectValue placeholder="Select..." />
@@ -353,42 +303,41 @@ export default function Plan() {
                                   ))}
                                 </SelectContent>
                               </Select>
-                                );
-                              })()
-                            ) : (
-                              <Input 
-                                type="number" 
-                                step="0.1"
-                                className="h-8 w-24"
-                                placeholder="-"
-                                value={watch(key) ?? ""}
-                                onChange={(e) => {
-                                  markExplicitTargetKey(key);
-                                  const val = e.target.value;
-                                  setValue(key, val === "" ? undefined as any : parseFloat(val), { shouldDirty: true });
-                                }}
-                              />
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Button 
-                              type="button" 
-                              size="icon" 
-                              variant="ghost" 
-                              className="h-8 w-8"
-                              onClick={() => onApplySingle(key)}
-                              title="Apply this change"
-                            >
-                              <ArrowRight className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </Card>
+                            );
+                          })()
+                        ) : (
+                          <Input 
+                            type="number" 
+                            step="0.1"
+                            className="h-8 w-24"
+                            placeholder="-"
+                            value={watch(key) ?? ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setValue(key, val === "" ? undefined as any : parseFloat(val), { shouldDirty: true });
+                            }}
+                          />
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          type="button" 
+                          size="icon" 
+                          variant="ghost" 
+                          className="h-8 w-8"
+                          onClick={() => onApplySingle(key)}
+                          title="Apply this change"
+                        >
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
 
         <p className="text-xs text-muted-foreground">
           * Variables marked with asterisk are not used by the prediction API
@@ -397,4 +346,3 @@ export default function Plan() {
     </Shell>
   );
 }
-
