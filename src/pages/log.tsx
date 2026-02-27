@@ -44,6 +44,18 @@ export default function Log() {
     }
   }, [userId]);
 
+  // Pre-fill form with current plan values (user's baseline from onboarding)
+  useEffect(() => {
+    if (currentPlan && Object.keys(currentPlan).length > 0) {
+      Object.keys(currentPlan).forEach((key) => {
+        const value = currentPlan[key as keyof typeof currentPlan];
+        if (value !== undefined && value !== null && value !== 0) {
+          setValue(key, value as number);
+        }
+      });
+    }
+  }, [currentPlan, setValue]);
+
   const onSubmit = async (data: any) => {
     if (!userId) {
       alert("No user ID found.");
@@ -83,7 +95,15 @@ export default function Log() {
         adherence: response.adherence,
       }]);
 
-      reset({});
+      // Reset form but re-fill with current plan values
+      const resetValues: Record<string, number> = {};
+      Object.keys(currentPlan).forEach((key) => {
+        const value = currentPlan[key as keyof typeof currentPlan];
+        if (value !== undefined && value !== null && value !== 0) {
+          resetValues[key] = value as number;
+        }
+      });
+      reset(resetValues);
       alert(`Log submitted! Adherence: ${(response.adherence.total * 100).toFixed(0)}%`);
     } catch (error) {
       console.error("[LOG] Failed to submit:", error);
@@ -109,7 +129,7 @@ export default function Log() {
             {/* Date inputs */}
             <Card>
               <CardContent className="p-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-end gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="period_start">Period Start</Label>
                     <Input
@@ -117,6 +137,7 @@ export default function Log() {
                       type="date"
                       value={periodStart}
                       onChange={(e) => setPeriodStart(e.target.value)}
+                      className="h-8 w-40"
                       required
                     />
                   </div>
@@ -127,6 +148,7 @@ export default function Log() {
                       type="date"
                       value={periodEnd}
                       onChange={(e) => setPeriodEnd(e.target.value)}
+                      className="h-8 w-40"
                       required
                     />
                   </div>
@@ -223,12 +245,21 @@ export default function Log() {
                           </TableCell>
                           <TableCell>
                             {isCategoricalVariable(key) ? (
+                              (() => {
+                                const watched = watch(key);
+                                const selectValue =
+                                  watched === undefined || watched === null
+                                    ? undefined
+                                    : String(watched);
+                                return (
                               <Select
-                                value={String(watch(key) ?? CATEGORICAL_VARIABLES[key][0].value)}
-                                onValueChange={(v) => setValue(key, parseInt(v))}
+                                value={selectValue}
+                                onValueChange={(v) =>
+                                  setValue(key, parseInt(v, 10), { shouldDirty: true })
+                                }
                               >
-                                <SelectTrigger className="h-8 w-full">
-                                  <SelectValue />
+                                <SelectTrigger className="h-8 w-24">
+                                  <SelectValue placeholder="Select..." />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {CATEGORICAL_VARIABLES[key].map((opt) => (
@@ -238,6 +269,8 @@ export default function Log() {
                                   ))}
                                 </SelectContent>
                               </Select>
+                                );
+                              })()
                             ) : (
                               <Input 
                                 type="number" 
@@ -258,4 +291,3 @@ export default function Log() {
     </Shell>
   );
 }
-
