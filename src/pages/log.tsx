@@ -23,7 +23,7 @@ interface LogEntry {
 }
 
 export default function Log() {
-  const { userId, currentPlan, setLoading, setError } = useStore();
+  const { userId, currentPlan, targetPlan, setLoading, setError } = useStore();
   const [adherence, setAdherence] = useState<{ total: number; diet: number; supplement: number } | null>(null);
   const [previousLogs, setPreviousLogs] = useState<LogEntry[]>([]);
   const [periodStart, setPeriodStart] = useState("");
@@ -239,9 +239,9 @@ export default function Log() {
                             </div>
                           </TableCell>
                           <TableCell className="font-mono text-xs">
-                            {typeof currentPlan[key] === 'number' 
-                              ? currentPlan[key]!.toLocaleString(undefined, { maximumFractionDigits: 2 }) 
-                              : (currentPlan[key] ?? "-")}
+                            {typeof targetPlan[key] === 'number' 
+                              ? targetPlan[key]!.toLocaleString(undefined, { maximumFractionDigits: 2 }) 
+                              : (targetPlan[key] ?? "-")}
                           </TableCell>
                           <TableCell>
                             {isCategoricalVariable(key) ? (
