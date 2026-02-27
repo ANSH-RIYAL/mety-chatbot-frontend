@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HeartPulse, RefreshCw } from "lucide-react";
@@ -5,25 +6,26 @@ import { useStore } from "@/lib/store";
 import * as api from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-export function LifespanCard({ embedded = false }: { embedded?: boolean }) {
+export function LifespanCard({
+  embedded = false,
+  recalculateNonce = 0,
+}: {
+  embedded?: boolean;
+  recalculateNonce?: number;
+}) {
   const { lifespanProjection, setLifespanProjection, userId } = useStore();
 
   const handleRecalculate = async () => {
     if (!userId) return;
 
     try {
-      // Set loading state - show "-" during calculation
       setLifespanProjection({ _loading: true } as any);
       
-      // Reload plans from backend first to ensure we have latest values
       const { loadPlans } = await import("@/lib/store");
       await loadPlans(userId);
       
-      // Get latest plans from store (after reload)
       const { targetPlan: latestTarget, currentPlan: latestCurrent, profile: latestProfile } = useStore.getState();
       
-      // Build prediction input: target plan (diffs) + current plan (for missing values)
-      // Target plan only contains diffs, so we fill missing with current plan
       const predictionInput: Record<string, number> = {};
       
       const predictionVars = [
@@ -36,7 +38,6 @@ export function LifespanCard({ embedded = false }: { embedded?: boolean }) {
         "vitamin_e", "water", "age"
       ];
       
-      // Start with current plan values (base)
       predictionVars.forEach((key) => {
         const currentVal = latestCurrent[key as keyof typeof latestCurrent];
         if (currentVal !== undefined && currentVal !== null && currentVal !== 0 && !isNaN(Number(currentVal))) {
@@ -44,8 +45,6 @@ export function LifespanCard({ embedded = false }: { embedded?: boolean }) {
         }
       });
       
-      // Overlay target plan values (diffs) - these override current plan
-      // Only include non-zero values from target plan
       Object.entries(latestTarget).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== 0 && !isNaN(Number(value))) {
           if (predictionVars.includes(key)) {
@@ -54,7 +53,6 @@ export function LifespanCard({ embedded = false }: { embedded?: boolean }) {
         }
       });
       
-      // Handle age and gender - check target first, then current, then profile
       if (!predictionInput.age) {
         const targetAge = (latestTarget as any).age;
         const currentAge = (latestCurrent as any).age;
@@ -87,7 +85,6 @@ export function LifespanCard({ embedded = false }: { embedded?: boolean }) {
         }
       }
 
-      // Check if we have minimum required variables (age and gender)
       if (!predictionInput.age || (predictionInput.gender === undefined && predictionInput.gender !== 0)) {
         alert("Please set age and gender in your plan before calculating predictions.");
         setLifespanProjection(null);
@@ -100,13 +97,19 @@ export function LifespanCard({ embedded = false }: { embedded?: boolean }) {
     } catch (error) {
       console.error("[LIFESPAN CARD] Failed to recalculate:", error);
       alert("Failed to calculate predictions. Please try again.");
-      // Restore previous projection on error
       const { lifespanProjection: prev } = useStore.getState();
       if (!prev || !(prev as any)?._loading) {
         setLifespanProjection(prev);
       }
     }
   };
+
+  // Recalculate projections when requested by parent (e.g. opening the Projections tab)
+  useEffect(() => {
+    if (!recalculateNonce) return;
+    handleRecalculate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recalculateNonce]);
 
   const projection = lifespanProjection;
   const isLoading = (projection as any)?._loading === true;
@@ -118,7 +121,6 @@ export function LifespanCard({ embedded = false }: { embedded?: boolean }) {
     { label: "Stroke", rr: projection.stroke_predicted_rr },
   ] : [];
 
-  // Always show structure - use "-" during loading or if no projection yet
   const hasProjection = projection && !isLoading && lifespan !== undefined && lifespan !== null;
 
   return (
@@ -130,7 +132,6 @@ export function LifespanCard({ embedded = false }: { embedded?: boolean }) {
         </CardTitle>
       </CardHeader>
       <CardContent className={cn(embedded ? "p-0 pt-0 space-y-3" : "p-4 pt-0 space-y-3")}>
-        {/* Always show structure - use "-" during loading */}
         <div>
           <div className="text-3xl font-bold text-primary tracking-tight">
             {hasProjection ? (
@@ -161,7 +162,6 @@ export function LifespanCard({ embedded = false }: { embedded?: boolean }) {
               );
             })
           ) : (
-            // Show placeholders for risks during loading or when no projection
             ["Cancer", "Cardiovascular", "Diabetes", "Stroke"].map((label) => (
               <div key={label} className="flex items-center justify-between text-sm">
                 <span>{label} Risk</span>
@@ -179,4 +179,3 @@ export function LifespanCard({ embedded = false }: { embedded?: boolean }) {
     </Card>
   );
 }
-
