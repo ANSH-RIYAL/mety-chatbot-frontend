@@ -20,6 +20,7 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
   const { userId } = useStore();
   const [isChatCollapsed, setIsChatCollapsed] = useState(true);
   const [panelTab, setPanelTab] = useState<"chat" | "projections">("chat");
+  const [projectionsRecalcNonce, setProjectionsRecalcNonce] = useState(0);
   const [autoApply, setAutoApply] = useState(false);
   const [autoApplyRecommended, setAutoApplyRecommended] = useState(false);
   const [isChatSettingsOpen, setIsChatSettingsOpen] = useState(false);
@@ -82,7 +83,6 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
                     // ignore
                   }
                   setLocation("/");
-                  // Hard reload ensures Zustand rehydrates from an empty storage state
                   window.location.reload();
                 }}
               >
@@ -95,9 +95,7 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
 
       <div className="flex-1 flex overflow-hidden h-[calc(100vh-3.5rem)]">
         {/* Main Content */}
-        <main
-          className="flex-1 flex flex-col overflow-hidden"
-        >
+        <main className="flex-1 flex flex-col overflow-hidden">
           {/* Navigation Tabs */}
           {showNav && userId && (
             <div className="border-b bg-muted/30 px-6 py-2 flex gap-1">
@@ -149,12 +147,9 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
             <div
               className={[
                 "fixed z-20 flex flex-col overflow-hidden",
-                // Keep visuals clean + fast (avoid heavy blur/gradients that can cause jank)
                 "bg-white",
                 "shadow-xl ring-1 ring-black/10 border border-black/5",
-                // Always floating card (mobile + desktop)
                 "bottom-4 right-4 w-[calc(100vw-2rem)] max-w-[520px] h-[72vh] rounded-2xl",
-                // Desktop sizing (still floating)
                 "lg:w-[420px] lg:h-[72vh]",
               ].join(" ")}
             >
@@ -169,7 +164,7 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
                       <div className="text-[11px] text-muted-foreground leading-tight">Chat & projections</div>
                     </div>
 
-                    {/* Underline tabs (instant switch, no animation) */}
+                    {/* Underline tabs */}
                     <div className="ml-2 flex items-end gap-4">
                       <button
                         type="button"
@@ -185,7 +180,10 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
                       </button>
                       <button
                         type="button"
-                        onClick={() => setPanelTab("projections")}
+                        onClick={() => {
+                          setPanelTab("projections");
+                          setProjectionsRecalcNonce((n) => n + 1);
+                        }}
                         className={[
                           "text-sm font-medium pb-2 border-b-2 transition-colors",
                           panelTab === "projections"
@@ -199,7 +197,7 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
                   </div>
 
                   <div className="flex items-center gap-1">
-                    {/* Settings (no overlap with chat content) */}
+                    {/* Settings */}
                     <div className="relative" ref={settingsRef}>
                       <Button
                         type="button"
@@ -276,7 +274,7 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
                 </div>
               </div>
 
-              {/* Instant switch (no overlay/fade, avoids overlap) */}
+              {/* Tab content */}
               <div className="flex-1 overflow-hidden">
                 {panelTab === "chat" ? (
                   <ChatPanel
@@ -287,7 +285,7 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
                 ) : (
                   <div className="h-full overflow-y-auto p-3">
                     <div className="rounded-2xl bg-white border border-black/5 shadow-sm p-3">
-                      <LifespanCard embedded />
+                      <LifespanCard embedded recalculateNonce={projectionsRecalcNonce} />
                     </div>
                   </div>
                 )}
@@ -299,4 +297,3 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
     </div>
   );
 }
-
