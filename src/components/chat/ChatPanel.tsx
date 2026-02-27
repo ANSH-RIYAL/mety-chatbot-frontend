@@ -258,4 +258,187 @@ export function ChatPanel({
               </div>
             </div>
           )}
-          {userChatHistory.map((msg, i
+          {userChatHistory.map((msg, i) => {
+            const isAssistant = msg.role === "assistant";
+            // Use message text as key to find suggested plan
+            const messageKey = isAssistant ? msg.text : undefined;
+            const suggestedPlan = messageKey ? suggestedPlans.get(messageKey) : undefined;
+            const isExpanded = messageKey ? expandedPlans.has(messageKey) : false;
+            
+            return (
+              <div key={i} className="space-y-2">
+                <div
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                      msg.role === "user"
+                        ? "bg-primary/10 text-foreground border border-primary/15 rounded-br-sm"
+                        : "bg-white border border-border text-foreground rounded-bl-sm"
+                    }`}
+                  >
+                    {msg.role === "assistant" && (
+                      <div className="flex items-center gap-1 mb-1 text-xs font-bold text-primary opacity-70">
+                        <Sparkles className="h-3 w-3" />
+                        mety-bot
+                      </div>
+                    )}
+                    {msg.text}
+                  </div>
+                </div>
+                
+                {/* Suggested Plan Dropdown */}
+                {isAssistant && suggestedPlan && Object.keys(suggestedPlan).length > 0 && (
+                  <div className="flex justify-start">
+                    <div className="max-w-[85%] bg-white/70 border border-black/5 rounded-2xl overflow-hidden shadow-sm">
+                      <button
+                        onClick={() => {
+                          if (!messageKey) return;
+                          setExpandedPlans((prev) => {
+                            const newSet = new Set(prev);
+                            if (isExpanded) {
+                              newSet.delete(messageKey);
+                            } else {
+                              newSet.add(messageKey);
+                            }
+                            return newSet;
+                          });
+                        }}
+                        className="w-full px-4 py-2.5 text-left text-xs font-medium text-muted-foreground hover:bg-white/80 flex items-center justify-between"
+                      >
+                        <span>View Suggested Plan</span>
+                        {isExpanded ? (
+                          <ChevronUp className="h-3 w-3" />
+                        ) : (
+                          <ChevronDown className="h-3 w-3" />
+                        )}
+                      </button>
+                      {isExpanded && (
+                        <div className="px-4 py-3 border-t border-black/5 bg-white/80 max-h-96 overflow-y-auto space-y-4">
+                          {/* Projections inline */}
+                          {suggestedProjections.has(messageKey!) && (() => {
+                            const projection = suggestedProjections.get(messageKey!);
+                            const lifespan = projection?.all_cause_mortality_predicted_lifespan;
+                            const risks = projection ? [
+                              { label: "Cancer", rr: projection.cancer_predicted_rr },
+                              { label: "Cardiovascular", rr: projection.cardio_vascular_disease_predicted_rr },
+                              { label: "Diabetes", rr: projection.diabetes_predicted_rr },
+                              { label: "Stroke", rr: projection.stroke_predicted_rr },
+                            ] : [];
+                            
+                            return (
+                              <div className="pb-3 border-b">
+                                <div className="text-xs font-semibold text-muted-foreground mb-2">Projections</div>
+                                {lifespan !== undefined && lifespan !== null ? (
+                                  <>
+                                    <div className="text-lg font-bold text-primary">
+                                      {lifespan.toFixed(1)} <span className="text-xs font-normal text-muted-foreground">years</span>
+                                    </div>
+                                    <div className="space-y-1 mt-2">
+                                      {risks.map((risk) => {
+                                        if (risk.rr === undefined) return null;
+                                        const percent = ((risk.rr - 1) * 100).toFixed(0);
+                                        return (
+                                          <div key={risk.label} className="flex justify-between text-xs">
+                                            <span>{risk.label} Risk</span>
+                                            <span className={`font-medium ${Number(percent) < 0 ? "text-emerald-600" : "text-red-600"}`}>
+                                              {percent}%
+                                            </span>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </>
+                                ) : (
+                                  <div className="text-xs text-muted-foreground">Calculating...</div>
+                                )}
+                              </div>
+                            );
+                          })()}
+                          
+                          {/* Suggested Plan Values */}
+                          <div>
+                            <div className="text-xs font-semibold text-muted-foreground mb-2">Suggested Values</div>
+                            <div className="space-y-1 text-xs">
+                              {Object.entries(suggestedPlan)
+                                .filter(([key, value]) => {
+                                  // Only show non-zero values and prediction API variables
+                                  return value !== null && value !== undefined && value !== 0 && 
+                                         isPredictionApiVariable(key as any);
+                                })
+                                .sort(([a], [b]) => a.localeCompare(b))
+                                .map(([key, value]) => (
+                                  <div key={key} className="flex justify-between items-center py-1">
+                                    <span className="text-muted-foreground capitalize">
+                                      {key.replace(/_/g, " ")}
+                                    </span>
+                                    <span className="font-mono font-medium ml-4">
+                                      {typeof value === 'number' 
+                                        ? value.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                                        : String(value)} {(key in UNITS ? UNITS[key as keyof PlanVariables] : "")}
+                                    </span>
+                                  </div>
+                                ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {pendingAction && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="text-sm font-medium mb-2">
+                Apply this change?
+              </p>
+              <div className="text-xs text-muted-foreground mb-3">
+                {Object.entries(pendingAction.payload).map(([key, value]) => (
+                  <div key={key}>
+                    {key.replace(/_/g, " ")}: {value}
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" className="w-24" onClick={handleApplyChange}>
+                  Apply
+                </Button>
+                <Button size="sm" className="w-24" variant="outline" onClick={() => setPendingAction(null)}>
+                  Ignore
+                </Button>
+              </div>
+            </div>
+          )}
+          <div ref={scrollRef} />
+        </div>
+        </ScrollArea>
+      </div>
+
+      <div className="p-3 bg-white border-t">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleSend();
+          }}
+          className="flex items-center gap-2"
+        >
+          <div className="flex-1 flex items-center gap-2 rounded-xl border border-border bg-white px-2 py-1">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Type a message..."
+              className="flex-1 border-0 shadow-none focus-visible:ring-0 px-2"
+              disabled={!userId}
+            />
+            <Button type="submit" size="icon" className="rounded-lg" disabled={!input.trim() || !userId}>
+              <Send className="h-4 w-4" />
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
