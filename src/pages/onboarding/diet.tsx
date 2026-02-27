@@ -31,7 +31,8 @@ export default function MyDiet() {
           const dietData: Record<string, number> = {};
           dietKeys.forEach((key) => {
             const value = response.current_plan[key as keyof typeof response.current_plan];
-            if (value !== undefined && value !== null) {
+            // Only load non-zero values - skip 0, undefined, null
+            if (value !== undefined && value !== null && value !== 0) {
               dietData[key] = Number(value);
             }
           });
