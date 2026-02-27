@@ -31,7 +31,8 @@ export default function MySupplements() {
           const supplementData: Record<string, number> = {};
           supplementKeys.forEach((key) => {
             const value = response.current_plan[key as keyof typeof response.current_plan];
-            if (value !== undefined && value !== null) {
+            // Only load non-zero values - skip 0, undefined, null
+            if (value !== undefined && value !== null && value !== 0) {
               supplementData[key] = Number(value);
             }
           });
