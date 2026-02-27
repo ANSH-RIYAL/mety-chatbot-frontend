@@ -1,5 +1,6 @@
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
+import { useEffect } from "react";
 import { OnboardingWrapper } from "@/components/onboarding/OnboardingWrapper";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,9 +13,37 @@ export default function MyDiet() {
   const [, setLocation] = useLocation();
   const { userId, setLoading, setError } = useStore();
   
-  const { register, handleSubmit, setValue, watch } = useForm<Record<string, number>>({
+  const { register, handleSubmit, setValue, watch, reset } = useForm<Record<string, number>>({
     defaultValues: {}
   });
+
+  // Fetch existing data when component mounts
+  useEffect(() => {
+    if (!userId) return;
+    
+    const loadExistingData = async () => {
+      try {
+        const response = await api.getPlan(userId);
+        if (response.current_plan) {
+          const dietKeys = VARIABLE_GROUPS.diet.filter(key => 
+            isPredictionApiVariable(key as VariableKey)
+          );
+          const dietData: Record<string, number> = {};
+          dietKeys.forEach((key) => {
+            const value = response.current_plan[key as keyof typeof response.current_plan];
+            if (value !== undefined && value !== null) {
+              dietData[key] = Number(value);
+            }
+          });
+          reset(dietData);
+        }
+      } catch (error) {
+        console.error("[DIET] Failed to load existing data:", error);
+      }
+    };
+    
+    loadExistingData();
+  }, [userId, reset]);
 
   const onSubmit = async (data: any) => {
     if (!userId) {
@@ -27,7 +56,6 @@ export default function MyDiet() {
       setError(null);
       
       const payload: Record<string, number> = {};
-      // Only include prediction API variables (no asterisk variables)
       VARIABLE_GROUPS.diet
         .filter(key => isPredictionApiVariable(key as VariableKey))
         .forEach((key) => {
@@ -44,7 +72,6 @@ export default function MyDiet() {
         payload,
       });
 
-      // Onboarding now saves directly to current_plan via backend
       setLocation("/onboarding/exercise");
     } catch (error) {
       console.error("[DIET] Failed to submit:", error);
@@ -70,14 +97,21 @@ export default function MyDiet() {
           const keyStr = key as string;
           if (isCategoricalVariable(keyStr as any)) {
             const options = CATEGORICAL_VARIABLES[keyStr];
+            const watched = watch(keyStr as any);
+            const selectValue =
+              watched === undefined || watched === null
+                ? undefined
+                : String(watched);
             return (
               <div key={keyStr} className="grid gap-2">
                 <Label htmlFor={keyStr}>
                   {keyStr.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
                 </Label>
                 <Select
-                  defaultValue={String(watch(keyStr as any) ?? options[0].value)}
-                  onValueChange={(v) => setValue(keyStr as any, parseInt(v))}
+                  value={selectValue}
+                  onValueChange={(v) =>
+                    setValue(keyStr as any, parseInt(v, 10), { shouldDirty: true })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={`Select ${keyStr.replace(/_/g, " ")}`} />
@@ -112,4 +146,3 @@ export default function MyDiet() {
     </OnboardingWrapper>
   );
 }
-
