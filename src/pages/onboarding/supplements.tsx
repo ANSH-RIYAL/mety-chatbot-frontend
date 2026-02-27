@@ -1,20 +1,49 @@
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
+import { useEffect } from "react";
 import { OnboardingWrapper } from "@/components/onboarding/OnboardingWrapper";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStore } from "@/lib/store";
 import * as api from "@/lib/api";
-import { VARIABLE_GROUPS, UNITS, isPredictionApiVariable, VariableKey } from "@/lib/constants";
+import { VARIABLE_GROUPS, UNITS, CATEGORICAL_VARIABLES, isCategoricalVariable, isPredictionApiVariable, VariableKey } from "@/lib/constants";
 
 export default function MySupplements() {
   const [, setLocation] = useLocation();
   const { userId, setLoading, setError } = useStore();
   
-  const { register, handleSubmit, setValue, watch } = useForm<Record<string, number>>({
+  const { register, handleSubmit, setValue, watch, reset } = useForm<Record<string, number>>({
     defaultValues: {}
   });
+
+  // Fetch existing data when component mounts
+  useEffect(() => {
+    if (!userId) return;
+    
+    const loadExistingData = async () => {
+      try {
+        const response = await api.getPlan(userId);
+        if (response.current_plan) {
+          const supplementKeys = VARIABLE_GROUPS.supplements.filter(key => 
+            isPredictionApiVariable(key as VariableKey)
+          );
+          const supplementData: Record<string, number> = {};
+          supplementKeys.forEach((key) => {
+            const value = response.current_plan[key as keyof typeof response.current_plan];
+            if (value !== undefined && value !== null) {
+              supplementData[key] = Number(value);
+            }
+          });
+          reset(supplementData);
+        }
+      } catch (error) {
+        console.error("[SUPPLEMENTS] Failed to load existing data:", error);
+      }
+    };
+    
+    loadExistingData();
+  }, [userId, reset]);
 
   const onSubmit = async (data: any) => {
     if (!userId) {
@@ -26,15 +55,14 @@ export default function MySupplements() {
       setLoading(true);
       setError(null);
       
-      // Convert form data to payload (only non-empty values)
-      // Only include prediction API variables (no asterisk variables)
       const payload: Record<string, number> = {};
       VARIABLE_GROUPS.supplements
         .filter(key => isPredictionApiVariable(key as VariableKey))
         .forEach((key) => {
-          const value = data[key];
+          const keyStr = key as string;
+          const value = data[keyStr];
           if (value !== undefined && value !== null && value !== "") {
-            payload[key] = Number(value);
+            payload[keyStr] = Number(value);
           }
         });
 
@@ -44,7 +72,6 @@ export default function MySupplements() {
         payload,
       });
 
-      // Onboarding now saves directly to current_plan via backend
       setLocation("/onboarding/diet");
     } catch (error) {
       console.error("[SUPPLEMENTS] Failed to submit:", error);
@@ -58,7 +85,7 @@ export default function MySupplements() {
   return (
     <OnboardingWrapper
       title="My Supplements"
-      description="Tell us about your supplement intake."
+      description="Tell us about your supplements."
       currentStep={2}
       totalSteps={4}
       onNext={handleSubmit(onSubmit)}
@@ -68,17 +95,35 @@ export default function MySupplements() {
           .filter(key => isPredictionApiVariable(key as VariableKey))
           .map((key) => {
           const keyStr = key as string;
-          if (keyStr === "multi_vitamins") {
+          if (isCategoricalVariable(keyStr as any)) {
+            const options = CATEGORICAL_VARIABLES[keyStr];
+            const watched = watch(keyStr as any);
+            const selectValue =
+              watched === undefined || watched === null
+                ? undefined
+                : String(watched);
             return (
-              <div key={keyStr} className="flex items-center space-x-2">
-                <Checkbox
-                  id={keyStr}
-                  checked={watch(keyStr as any) === 1}
-                  onCheckedChange={(checked) => setValue(keyStr as any, checked ? 1 : 0)}
-                />
-                <Label htmlFor={keyStr} className="cursor-pointer">
-                  Multi Vitamins
+              <div key={keyStr} className="grid gap-2">
+                <Label htmlFor={keyStr}>
+                  {keyStr.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
                 </Label>
+                <Select
+                  value={selectValue}
+                  onValueChange={(v) =>
+                    setValue(keyStr as any, parseInt(v, 10), { shouldDirty: true })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={`Select ${keyStr.replace(/_/g, " ")}`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {options.map((opt) => (
+                      <SelectItem key={opt.value} value={String(opt.value)}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             );
           }
@@ -101,4 +146,3 @@ export default function MySupplements() {
     </OnboardingWrapper>
   );
 }
-
