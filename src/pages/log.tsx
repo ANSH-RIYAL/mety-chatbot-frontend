@@ -276,7 +276,11 @@ export default function Log() {
                                 type="number" 
                                 step="0.1"
                                 className="h-8 w-24"
-                                {...register(key, { valueAsNumber: true })}
+                                value={watch(key) ?? ""}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setValue(key, val === "" ? undefined as any : parseFloat(val), { shouldDirty: true });
+                                }}
                               />
                             )}
                           </TableCell>
