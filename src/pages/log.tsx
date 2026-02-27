@@ -29,7 +29,7 @@ export default function Log() {
   const [periodStart, setPeriodStart] = useState("");
   const [periodEnd, setPeriodEnd] = useState("");
 
-  const { register, handleSubmit, reset, setValue, watch } = useForm<Record<string, number>>({
+  const { handleSubmit, reset, setValue, watch } = useForm<Record<string, number>>({
     defaultValues: {}
   });
 
