@@ -13,7 +13,7 @@ import { Shell } from "@/components/layout/Shell";
 import { applyTargetToCurrent } from "@/lib/api";
 
 export default function Plan() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { userId, currentPlan, targetPlan, optimalPlan, updateTargetPlan, setLoading, setError, latestDiffDetected, latestSuggestedPlan } = useStore();
 
   const normalizeTargetDefaults = (values: Record<string, any>) => {
@@ -173,6 +173,9 @@ export default function Plan() {
               Review and adjust your target plan
             </p>
           </div>
+          <Button variant="outline" size="sm" onClick={() => setLocation("/onboarding/about-me")}>
+            Edit Profile
+          </Button>
         </div>
 
         <Card>
