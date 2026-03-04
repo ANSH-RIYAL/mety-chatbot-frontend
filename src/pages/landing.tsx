@@ -18,8 +18,14 @@ export default function Landing() {
     setIsLoading(true);
     try {
       setUserId(inputUserId.trim());
-      await loadPlans(inputUserId.trim());
-      setLocation("/onboarding/about-me");
+      const response = await loadPlans(inputUserId.trim());
+
+      // If user already completed onboarding, go to plan page
+      if (response?.profile?.name) {
+        setLocation("/plan");
+      } else {
+        setLocation("/onboarding/about-me");
+      }
     } catch (error) {
       console.error("[LANDING] Failed to initialize:", error);
       alert("Failed to initialize. Please try again.");
@@ -58,4 +64,3 @@ export default function Landing() {
     </div>
   );
 }
-

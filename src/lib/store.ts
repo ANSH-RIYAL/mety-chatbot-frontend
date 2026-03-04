@@ -179,6 +179,11 @@ export async function loadPlans(userId: string) {
     useStore.getState().setError(null);
     const response = await api.getPlan(userId);
     
+    // Store profile from backend if it exists
+    if (response.profile && Object.keys(response.profile).length > 0) {
+      useStore.getState().updateProfile(response.profile);
+    }
+    
     // Get profile to ensure age and gender are in plans
     const profile = useStore.getState().profile;
     
@@ -206,12 +211,15 @@ export async function loadPlans(userId: string) {
       optimalPlan: response.optimal_plan || OPTIMAL_PLAN,
     });
     useStore.getState().setLoading(false);
+    
+    // Return response so landing page can check profile
+    return response;
   } catch (error) {
     console.error("[STORE] Failed to load plans:", error);
     useStore.getState().setError(
       error instanceof Error ? error.message : "Failed to load plans"
     );
     useStore.getState().setLoading(false);
+    return null;
   }
 }
-
