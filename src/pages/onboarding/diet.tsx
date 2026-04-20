@@ -83,6 +83,9 @@ export default function MyDiet() {
     }
   };
 
+  const formatLabel = (keyStr: string) =>
+    keyStr.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+
   return (
     <OnboardingWrapper
       title="My Diet"
@@ -91,11 +94,17 @@ export default function MyDiet() {
       totalSteps={4}
       onNext={handleSubmit(onSubmit)}
     >
-      <div className="grid gap-4">
+      <p className="mb-5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+        Enter your usual intake in each row.
+      </p>
+      <div className="divide-y divide-black/5">
         {VARIABLE_GROUPS.diet
           .filter(key => isPredictionApiVariable(key as VariableKey))
           .map((key) => {
           const keyStr = key as string;
+          const name = formatLabel(keyStr);
+          const unit = UNITS[keyStr as keyof typeof UNITS];
+
           if (isCategoricalVariable(keyStr as any)) {
             const options = CATEGORICAL_VARIABLES[keyStr];
             const watched = watch(keyStr as any);
@@ -104,42 +113,64 @@ export default function MyDiet() {
                 ? undefined
                 : String(watched);
             return (
-              <div key={keyStr} className="grid gap-2">
-                <Label htmlFor={keyStr}>
-                  {keyStr.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-                </Label>
-                <Select
-                  value={selectValue}
-                  onValueChange={(v) =>
-                    setValue(keyStr as any, parseInt(v, 10), { shouldDirty: true })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={`Select ${keyStr.replace(/_/g, " ")}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {options.map((opt) => (
-                      <SelectItem key={opt.value} value={String(opt.value)}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div
+                key={keyStr}
+                className="flex items-center gap-3 py-4 first:pt-0 last:pb-0"
+              >
+                <div className="flex min-w-0 shrink-0 items-baseline gap-2 sm:w-[38%]">
+                  <Label htmlFor={keyStr} className="text-sm font-medium text-foreground">
+                    {name}
+                  </Label>
+                </div>
+                <span className="shrink-0 text-sm text-muted-foreground/80" aria-hidden>
+                  :
+                </span>
+                <div className="min-w-0 flex-1 max-w-md">
+                  <Select
+                    value={selectValue}
+                    onValueChange={(v) =>
+                      setValue(keyStr as any, parseInt(v, 10), { shouldDirty: true })
+                    }
+                  >
+                    <SelectTrigger id={keyStr}>
+                      <SelectValue placeholder="Choose" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {options.map((opt) => (
+                        <SelectItem key={opt.value} value={String(opt.value)}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             );
           }
           return (
-            <div key={keyStr} className="grid gap-2">
-              <Label htmlFor={keyStr}>
-                {keyStr.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
-                {UNITS[keyStr as keyof typeof UNITS] && ` (${UNITS[keyStr as keyof typeof UNITS]})`}
-              </Label>
-              <Input
-                id={keyStr}
-                type="number"
-                step="0.1"
-                {...register(keyStr as any, { valueAsNumber: true })}
-              />
+            <div
+              key={keyStr}
+              className="flex items-center gap-3 py-4 first:pt-0 last:pb-0"
+            >
+              <div className="flex min-w-0 shrink-0 items-baseline gap-x-2 sm:w-[38%]">
+                <Label htmlFor={keyStr} className="text-sm font-medium text-foreground">
+                  {name}
+                  {unit ? (
+                    <span className="font-normal text-muted-foreground"> ({unit})</span>
+                  ) : null}
+                </Label>
+              </div>
+              <span className="shrink-0 text-sm text-muted-foreground/80" aria-hidden>
+                :
+              </span>
+              <div className="min-w-0 flex-1 max-w-md">
+                <Input
+                  id={keyStr}
+                  type="number"
+                  step="0.1"
+                  {...register(keyStr as any, { valueAsNumber: true })}
+                />
+              </div>
             </div>
           );
         })}

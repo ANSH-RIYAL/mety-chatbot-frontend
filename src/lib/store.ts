@@ -45,6 +45,12 @@ interface AppState {
   latestDiffDetected: Partial<PlanVariables> | null;
   latestSuggestedPlan: Partial<PlanVariables> | null;
   setLatestChatResponse: (diffDetected: Partial<PlanVariables> | null, suggestedPlan: Partial<PlanVariables> | null) => void;
+
+  /** Chat send options (UI lives on Plan page next to Save All Targets) */
+  chatAutoApplyExtractedVars: boolean;
+  chatAutoApplyRecommendedPlan: boolean;
+  setChatAutoApplyExtractedVars: (value: boolean) => void;
+  setChatAutoApplyRecommendedPlan: (value: boolean) => void;
   
   // Loading states
   isLoading: boolean;
@@ -152,6 +158,11 @@ export const useStore = create<AppState>()(
         latestDiffDetected: diffDetected,
         latestSuggestedPlan: suggestedPlan,
       }),
+
+      chatAutoApplyExtractedVars: false,
+      chatAutoApplyRecommendedPlan: false,
+      setChatAutoApplyExtractedVars: (value) => set({ chatAutoApplyExtractedVars: value }),
+      setChatAutoApplyRecommendedPlan: (value) => set({ chatAutoApplyRecommendedPlan: value }),
       
       isLoading: false,
       setLoading: (loading) => set({ isLoading: loading }),
@@ -167,6 +178,8 @@ export const useStore = create<AppState>()(
         targetPlan: state.targetPlan,
         // Only persist chat history for current user
         chatHistory: state.chatHistory.filter(m => m.user_id === state.userId),
+        chatAutoApplyExtractedVars: state.chatAutoApplyExtractedVars,
+        chatAutoApplyRecommendedPlan: state.chatAutoApplyRecommendedPlan,
       }),
     }
   )

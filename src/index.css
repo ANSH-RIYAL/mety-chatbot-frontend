@@ -1,25 +1,26 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: hsl(0 0% 100%);
-  --color-foreground: hsl(0 0% 10%);
-  --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(0 0% 10%);
+  /* Neutral-first with a whisper of mint; primary carries brand */
+  --color-background: hsl(158 18% 98%);
+  --color-foreground: hsl(168 28% 13%);
+  --color-card: hsl(158 12% 99.5%);
+  --color-card-foreground: hsl(168 28% 13%);
   --color-popover: hsl(0 0% 100%);
-  --color-popover-foreground: hsl(0 0% 10%);
-  --color-primary: hsl(142 76% 36%);
+  --color-popover-foreground: hsl(168 28% 13%);
+  --color-primary: hsl(156 72% 38%);
   --color-primary-foreground: hsl(0 0% 100%);
-  --color-secondary: hsl(0 0% 96%);
-  --color-secondary-foreground: hsl(0 0% 10%);
-  --color-muted: hsl(0 0% 96%);
-  --color-muted-foreground: hsl(0 0% 40%);
-  --color-accent: hsl(0 0% 96%);
-  --color-accent-foreground: hsl(0 0% 10%);
+  --color-secondary: hsl(158 22% 93.5%);
+  --color-secondary-foreground: hsl(168 22% 22%);
+  --color-muted: hsl(160 16% 95.5%);
+  --color-muted-foreground: hsl(167 14% 39%);
+  --color-accent: hsl(158 24% 93%);
+  --color-accent-foreground: hsl(168 22% 22%);
   --color-destructive: hsl(0 84% 60%);
   --color-destructive-foreground: hsl(0 0% 98%);
-  --color-border: hsl(0 0% 90%);
-  --color-input: hsl(0 0% 90%);
-  --color-ring: hsl(142 76% 36%);
+  --color-border: hsl(158 16% 89%);
+  --color-input: hsl(158 16% 89%);
+  --color-ring: hsl(156 72% 38%);
 }
 
 * {
@@ -28,9 +29,99 @@
   box-sizing: border-box;
 }
 
+/* Strong tie-dye mint wash — onboarding only (`OnboardingWrapper`); app shell uses `body` below */
+.bg-page-dye {
+  background-color: hsl(158 22% 95%);
+  background-image:
+    radial-gradient(ellipse 92% 55% at 8% 12%, hsl(154 48% 82% / 0.52), transparent 48%),
+    radial-gradient(ellipse 70% 85% at 95% 5%, hsl(172 38% 84% / 0.45), transparent 46%),
+    radial-gradient(ellipse 65% 70% at 82% 92%, hsl(156 46% 80% / 0.48), transparent 50%),
+    radial-gradient(ellipse 110% 42% at 38% 48%, hsl(160 32% 86% / 0.4), transparent 54%),
+    radial-gradient(ellipse 50% 75% at 4% 72%, hsl(148 42% 82% / 0.42), transparent 48%),
+    radial-gradient(ellipse 75% 50% at 68% 22%, hsl(156 72% 40% / 0.11), transparent 42%),
+    radial-gradient(ellipse 60% 60% at 52% 88%, hsl(168 35% 85% / 0.35), transparent 50%),
+    radial-gradient(ellipse 55% 90% at 28% 35%, hsl(158 28% 90% / 0.32), transparent 45%),
+    linear-gradient(165deg, hsl(158 24% 97%) 0%, hsl(162 18% 94%) 38%, hsl(156 20% 92%) 100%);
+  min-height: 100vh;
+}
+
 body {
-  font-family: system-ui, -apple-system, sans-serif;
-  background: var(--color-background);
+  font-family: Inter, system-ui, -apple-system, sans-serif;
   color: var(--color-foreground);
+  /* Calmer canvas for Plan / Log / shell — not full tie-dye */
+  background-color: hsl(158 14% 98%);
+  background-image:
+    radial-gradient(ellipse 85% 55% at 12% 18%, hsl(156 28% 92% / 0.22), transparent 52%),
+    radial-gradient(ellipse 70% 65% at 88% 12%, hsl(158 22% 92% / 0.18), transparent 48%),
+    linear-gradient(180deg, hsl(158 14% 99%), hsl(160 12% 97%));
+  min-height: 100vh;
+}
+
+/* Full-width root so centered layouts get equal space left/right */
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+button,
+input,
+a {
+  transition: all 180ms ease;
+}
+
+::selection {
+  background: hsl(156 72% 38% / 0.2);
+  color: var(--color-foreground);
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 300ms ease-out both;
+}
+
+/* Onboarding: soft step transition (Continue / Back) — fade + gentle drift, no 3D flip */
+.onboarding-flip-root {
+  overflow-x: hidden;
+}
+
+@keyframes onboarding-step-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.onboarding-flip-page {
+  animation: onboarding-step-in 0.65s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .onboarding-flip-page {
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+  }
 }
 

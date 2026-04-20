@@ -72,42 +72,61 @@ export default function AboutMe() {
       totalSteps={4}
       onNext={handleSubmit(onSubmit)}
     >
-      <div className="grid gap-4">
-        <div className="grid gap-2">
-          <Label htmlFor="name">Name</Label>
-          <Input id="name" {...register("name", { required: true })} />
-        </div>
-        
-        <div className="grid gap-2">
-          <Label htmlFor="age">Age</Label>
-          <Input id="age" type="number" {...register("age", { valueAsNumber: true, required: true })} />
+      <p className="mb-5 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+        Enter your details in each row, then tap Continue. You only need to fill this in once for this step.
+      </p>
+
+      <div className="divide-y divide-black/5">
+        <div className="flex items-center gap-3 py-4 first:pt-0 last:pb-0">
+          <div className="flex min-w-0 shrink-0 items-baseline gap-2 sm:w-[38%]">
+            <Label htmlFor="name" className="text-sm font-medium text-foreground">
+              Name
+            </Label>
+          </div>
+          <div className="min-w-0 flex-1 max-w-md">
+            <Input id="name" autoComplete="name" {...register("name", { required: true })} />
+          </div>
         </div>
 
-        <div className="grid gap-2">
-          <Label>Gender</Label>
-          {/*
-            Don't default to Male when gender is not set.
-            Only preselect a value if we already have one saved in profile.
-          */}
-          {(() => {
-            const watchedGender = watch("gender");
-            const selectValue =
-              watchedGender === 0 || watchedGender === 1 ? String(watchedGender) : undefined;
-            return (
-              <Select
-                value={selectValue}
-                onValueChange={(v) => setValue("gender", parseInt(v, 10))}
-              >
-            <SelectTrigger>
-              <SelectValue placeholder="Select gender" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="0">Male</SelectItem>
-              <SelectItem value="1">Female</SelectItem>
-            </SelectContent>
-              </Select>
-            );
-          })()}
+        <div className="flex items-center gap-3 py-4 first:pt-0 last:pb-0">
+          <div className="flex min-w-0 shrink-0 items-baseline gap-2 sm:w-[38%]">
+            <Label htmlFor="age" className="text-sm font-medium text-foreground">
+              Age
+            </Label>
+          </div>
+          <div className="min-w-0 flex-1 max-w-md">
+            <Input id="age" type="number" inputMode="numeric" {...register("age", { valueAsNumber: true, required: true })} />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 py-4 first:pt-0 last:pb-0">
+          <div className="flex min-w-0 shrink-0 items-baseline gap-2 sm:w-[38%]">
+            <Label htmlFor="gender" className="text-sm font-medium text-foreground">
+              Gender
+            </Label>
+          </div>
+          <div className="min-w-0 flex-1 max-w-md">
+            {/*
+              Don't default to Male when gender is not set.
+              Only preselect a value if we already have one saved in profile.
+            */}
+            {(() => {
+              const watchedGender = watch("gender");
+              const selectValue =
+                watchedGender === 0 || watchedGender === 1 ? String(watchedGender) : undefined;
+              return (
+                <Select value={selectValue} onValueChange={(v) => setValue("gender", parseInt(v, 10))}>
+                  <SelectTrigger id="gender">
+                    <SelectValue placeholder="Choose" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Male</SelectItem>
+                    <SelectItem value="1">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+              );
+            })()}
+          </div>
         </div>
       </div>
     </OnboardingWrapper>

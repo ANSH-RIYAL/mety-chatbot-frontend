@@ -240,15 +240,15 @@ export function ChatPanel({
   };
 
   return (
-    <div className="flex flex-col h-full bg-muted/5">
+    <div className="flex flex-col h-full bg-gradient-to-b from-muted/30 via-background to-background">
       <div className="flex-1 overflow-hidden">
         <ScrollArea className="h-full p-3">
         <div className="space-y-4">
           {/* Static first message */}
           {userChatHistory.length === 0 && (
             <div className="space-y-2">
-              <div className="flex justify-start">
-                <div className="max-w-[80%] rounded-2xl rounded-bl-sm px-4 py-3 text-sm bg-white border border-border text-foreground">
+              <div className="flex justify-start animate-fade-in-up">
+                <div className="max-w-[80%] rounded-2xl rounded-bl-sm px-4 py-3 text-sm bg-white border border-border text-foreground shadow-sm">
                   <div className="flex items-center gap-1 mb-1 text-xs font-bold text-primary opacity-70">
                     <Sparkles className="h-3 w-3" />
                     mety-bot
@@ -268,13 +268,13 @@ export function ChatPanel({
             return (
               <div key={i} className="space-y-2">
                 <div
-                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  className={`flex animate-fade-in-up ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
                     className={`max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap break-words ${
                       msg.role === "user"
-                        ? "bg-primary/10 text-foreground border border-primary/15 rounded-br-sm"
-                        : "bg-white border border-border text-foreground rounded-bl-sm"
+                        ? "bg-primary/12 text-foreground border border-primary/20 rounded-br-sm shadow-sm"
+                        : "bg-white border border-border text-foreground rounded-bl-sm shadow-sm"
                     }`}
                   >
                     {msg.role === "assistant" && (
@@ -290,7 +290,7 @@ export function ChatPanel({
                 {/* Suggested Plan Dropdown */}
                 {isAssistant && suggestedPlan && Object.keys(suggestedPlan).length > 0 && (
                   <div className="flex justify-start">
-                    <div className="max-w-[85%] bg-white/70 border border-black/5 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="max-w-[85%] bg-white/80 border border-border/70 rounded-2xl overflow-hidden shadow-sm backdrop-blur-sm">
                       <button
                         onClick={() => {
                           if (!messageKey) return;
@@ -314,7 +314,7 @@ export function ChatPanel({
                         )}
                       </button>
                       {isExpanded && (
-                        <div className="px-4 py-3 border-t border-black/5 bg-white/80 max-h-96 overflow-y-auto space-y-4">
+                        <div className="px-4 py-3 border-t border-border/70 bg-white/80 max-h-96 overflow-y-auto space-y-4">
                           {/* Projections inline */}
                           {suggestedProjections.has(messageKey!) && (() => {
                             const projection = suggestedProjections.get(messageKey!);
@@ -417,7 +417,7 @@ export function ChatPanel({
         </ScrollArea>
       </div>
 
-      <div className="p-3 bg-white border-t">
+      <div className="p-3 bg-white/90 backdrop-blur-md border-t border-border/70">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -425,7 +425,7 @@ export function ChatPanel({
           }}
           className="flex items-center gap-2"
         >
-          <div className="flex-1 flex items-center gap-2 rounded-xl border border-border bg-white px-2 py-1">
+          <div className="flex-1 flex items-center gap-2 rounded-xl border border-border bg-white px-2 py-1 shadow-sm">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
