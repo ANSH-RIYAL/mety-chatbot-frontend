@@ -1,4 +1,4 @@
-### Mety Chatbot Frontend
+# Mety Chatbot Frontend
 
 Frontend for the Mety Chatbot Assistant Platform.
 
