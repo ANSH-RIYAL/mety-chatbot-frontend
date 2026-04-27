@@ -31,5 +31,5 @@ jobs:
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: chatbot-display-23dca
+          projectId: chatbot-display
           channelId: live
