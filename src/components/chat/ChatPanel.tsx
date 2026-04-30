@@ -18,7 +18,7 @@ export function ChatPanel({
   autoApplyRecommended: boolean;
   clearChatNonce: number;
 }) {
-  const { userId, chatHistory, addChatMessage, setLoading, setError, setChatHistory } = useStore();
+  const { userId, chatHistory, addChatMessage, setLoading, setError, setChatHistory, markChatStartedForCurrentUser } = useStore();
   const [input, setInput] = useState("");
   const [pendingAction, setPendingAction] = useState<ChatAction | null>(null);
   const [suggestedPlans, setSuggestedPlans] = useState<Map<string, Partial<PlanVariables>>>(new Map());
@@ -81,6 +81,7 @@ export function ChatPanel({
     setInput("");
 
     // Add user message to local history immediately
+    markChatStartedForCurrentUser();
     addChatMessage("user", userMessage);
 
     try {

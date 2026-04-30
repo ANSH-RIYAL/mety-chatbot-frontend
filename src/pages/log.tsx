@@ -118,7 +118,7 @@ export default function Log() {
 
   return (
     <Shell>
-      <div className="p-6 space-y-6">
+      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
             <div>
               <h1 className="text-3xl font-bold text-primary tracking-tight">Daily Log</h1>
               <p className="text-muted-foreground mt-1">

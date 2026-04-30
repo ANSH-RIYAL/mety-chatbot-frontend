@@ -40,6 +40,8 @@ interface AppState {
   chatHistory: ChatHistoryMessage[];
   setChatHistory: (history: ChatHistoryMessage[]) => void;
   addChatMessage: (role: "user" | "assistant", text: string) => void;
+  hasStartedChatByUser: Record<string, boolean>;
+  markChatStartedForCurrentUser: () => void;
   
   // Latest chat response data (for applying to target plan)
   latestDiffDetected: Partial<PlanVariables> | null;
@@ -148,8 +150,20 @@ export const useStore = create<AppState>()(
           const userMessages = state.chatHistory.filter(m => m.user_id === userId);
           return {
             chatHistory: [...userMessages, message],
+            hasStartedChatByUser:
+              role === "user"
+                ? { ...state.hasStartedChatByUser, [userId]: true }
+                : state.hasStartedChatByUser,
           };
         });
+      },
+      hasStartedChatByUser: {},
+      markChatStartedForCurrentUser: () => {
+        const userId = get().userId;
+        if (!userId) return;
+        set((state) => ({
+          hasStartedChatByUser: { ...state.hasStartedChatByUser, [userId]: true },
+        }));
       },
       
       latestDiffDetected: null,
@@ -178,6 +192,7 @@ export const useStore = create<AppState>()(
         targetPlan: state.targetPlan,
         // Only persist chat history for current user
         chatHistory: state.chatHistory.filter(m => m.user_id === state.userId),
+        hasStartedChatByUser: state.hasStartedChatByUser,
         chatAutoApplyExtractedVars: state.chatAutoApplyExtractedVars,
         chatAutoApplyRecommendedPlan: state.chatAutoApplyRecommendedPlan,
       }),

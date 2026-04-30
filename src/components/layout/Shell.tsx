@@ -6,6 +6,8 @@ import { LifespanCard } from "@/components/dashboard/LifespanCard";
 import { useStore } from "@/lib/store";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface ShellProps {
   children: React.ReactNode;
@@ -15,7 +17,13 @@ interface ShellProps {
 
 export function Shell({ children, showChat = true, showNav = true }: ShellProps) {
   const [location, setLocation] = useLocation();
-  const { userId, chatAutoApplyExtractedVars, chatAutoApplyRecommendedPlan } = useStore();
+  const {
+    userId,
+    chatAutoApplyExtractedVars,
+    chatAutoApplyRecommendedPlan,
+    setChatAutoApplyExtractedVars,
+    setChatAutoApplyRecommendedPlan,
+  } = useStore();
   const [isChatCollapsed, setIsChatCollapsed] = useState(true);
   const [panelTab, setPanelTab] = useState<"chat" | "projections">("chat");
   const [projectionsRecalcNonce, setProjectionsRecalcNonce] = useState(0);
@@ -207,9 +215,37 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
                       </Button>
 
                       {isChatSettingsOpen && (
-                        <div className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-border bg-popover p-3 shadow-lg">
+                        <div className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-border bg-popover p-3 shadow-lg">
                           <div className="text-xs font-semibold text-muted-foreground">Chat</div>
-                          <div className="mt-2">
+                          <div className="mt-3 space-y-3">
+                            <div className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-2.5">
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  id="chat-auto-apply-vars"
+                                  checked={chatAutoApplyExtractedVars}
+                                  onCheckedChange={(checked) => setChatAutoApplyExtractedVars(!!checked)}
+                                />
+                                <Label
+                                  htmlFor="chat-auto-apply-vars"
+                                  className="text-xs cursor-pointer text-foreground/90 select-none"
+                                >
+                                  Auto-apply extracted variables
+                                </Label>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  id="chat-auto-apply-recommended"
+                                  checked={chatAutoApplyRecommendedPlan}
+                                  onCheckedChange={(checked) => setChatAutoApplyRecommendedPlan(!!checked)}
+                                />
+                                <Label
+                                  htmlFor="chat-auto-apply-recommended"
+                                  className="text-xs cursor-pointer text-foreground/90 select-none"
+                                >
+                                  Auto-apply recommended plan
+                                </Label>
+                              </div>
+                            </div>
                             <Button
                               type="button"
                               variant="destructive"

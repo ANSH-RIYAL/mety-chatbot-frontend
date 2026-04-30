@@ -2,15 +2,13 @@ import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card } from "@/components/ui/card";
 import { useStore, loadPlans } from "@/lib/store";
 import { OPTIMAL_PLAN, UNITS, VariableKey, isPredictionApiVariable, VARIABLE_GROUPS, CATEGORICAL_VARIABLES, isCategoricalVariable } from "@/lib/constants";
-import { Save, ArrowRight } from "lucide-react";
+import { Save } from "lucide-react";
 import { Shell } from "@/components/layout/Shell";
 import { applyTargetToCurrent } from "@/lib/api";
 
@@ -26,11 +24,13 @@ export default function Plan() {
     setError,
     latestDiffDetected,
     latestSuggestedPlan,
-    chatAutoApplyExtractedVars,
-    chatAutoApplyRecommendedPlan,
-    setChatAutoApplyExtractedVars,
-    setChatAutoApplyRecommendedPlan,
+    hasStartedChatByUser,
   } = useStore();
+  const hasChatStarted = !!(userId && hasStartedChatByUser[userId]);
+  const showRecommendedPlanButton =
+    hasChatStarted ||
+    !!(latestDiffDetected && Object.keys(latestDiffDetected).length > 0) ||
+    !!(latestSuggestedPlan && Object.keys(latestSuggestedPlan).length > 0);
 
   const normalizeTargetDefaults = (values: Record<string, any>) => {
     const next = { ...(values || {}) };
@@ -44,7 +44,7 @@ export default function Plan() {
     return normalizeTargetDefaults((targetPlan || {}) as any);
   };
 
-  const { handleSubmit, getValues, reset, setValue, watch, formState } = useForm({
+  const { handleSubmit, reset, setValue, watch, formState } = useForm({
     defaultValues: getInitialFormValues()
   });
 
@@ -128,28 +128,6 @@ export default function Plan() {
     }
   };
 
-  const onApplySingle = async (key: VariableKey) => {
-    if (!userId) return;
-
-    const val = getValues(key);
-    if (val === undefined || val === null || isNaN(Number(val))) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const numVal = Number(val);
-      await updateTargetPlan({ [key]: numVal });
-      await loadPlans(userId);
-      reset(normalizeTargetDefaults((targetPlan || {}) as any));
-    } catch (error) {
-      console.error("[PLAN] Failed to apply:", error);
-      alert("Failed to apply change. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const getOrderedKeys = (): VariableKey[] => {
     const ordered: VariableKey[] = [
       ...VARIABLE_GROUPS.supplements,
@@ -176,21 +154,27 @@ export default function Plan() {
 
   return (
     <Shell>
-      <div className="p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
+      <div className="mx-auto w-full max-w-5xl space-y-6 px-5 py-6 sm:px-8 lg:px-10">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="space-y-1">
             <h1 className="text-3xl font-bold text-primary tracking-tight">My Plan</h1>
             <p className="text-muted-foreground mt-1">
               Review and adjust your target plan
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setLocation("/onboarding/about-me")}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 px-4"
+            onClick={() => setLocation("/onboarding/about-me")}
+          >
             Edit Profile
           </Button>
         </div>
 
         <Card className="overflow-hidden">
-          <div className="p-4 md:p-5 border-b bg-muted/20 flex flex-wrap gap-3 sm:justify-end">
+          <div className="border-b bg-muted/20 px-5 py-4 sm:px-6 sm:py-5">
+            <div className="flex flex-wrap gap-3 sm:justify-end">
             {latestDiffDetected && Object.keys(latestDiffDetected).length > 0 && (
               <Button
                 variant="outline"
@@ -213,84 +197,32 @@ export default function Plan() {
                 Apply Extracted Variables
               </Button>
             )}
-            {latestSuggestedPlan && Object.keys(latestSuggestedPlan).length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  if (!userId) return;
-                  try {
-                    setLoading(true);
-                    const { targetPlan: currentTarget, setPlans } = useStore.getState();
-                    const newTargetPlan = { ...currentTarget, ...latestSuggestedPlan };
-
-                    setPlans({
-                      currentPlan: useStore.getState().currentPlan,
-                      targetPlan: newTargetPlan,
-                      optimalPlan: useStore.getState().optimalPlan,
-                    });
-
-                    reset(normalizeTargetDefaults(newTargetPlan as any));
-
-                    const targetDiff: Record<string, number> = {};
-                    Object.keys(newTargetPlan).forEach((key) => {
-                      const val = newTargetPlan[key as VariableKey];
-                      if (val !== undefined && val !== null && val !== 0) {
-                        targetDiff[key] = Number(val);
-                      }
-                    });
-
-                    await updateTargetPlan(targetDiff);
-                    await loadPlans(userId);
-                  } catch (error) {
-                    console.error("[PLAN] Failed to apply recommended plan:", error);
-                    alert("Failed to apply recommended plan");
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-              >
-                Apply Recommended Plan
-              </Button>
-            )}
             <div className="flex w-full flex-wrap items-center justify-end gap-x-4 gap-y-2 sm:w-auto">
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="plan-chat-auto-apply-vars"
-                    checked={chatAutoApplyExtractedVars}
-                    onCheckedChange={(c) => setChatAutoApplyExtractedVars(!!c)}
-                  />
-                  <Label htmlFor="plan-chat-auto-apply-vars" className="text-xs sm:text-sm cursor-pointer select-none">
-                    Auto-apply extracted variables
-                  </Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="plan-chat-auto-apply-recommended"
-                    checked={chatAutoApplyRecommendedPlan}
-                    onCheckedChange={(c) => setChatAutoApplyRecommendedPlan(!!c)}
-                  />
-                  <Label htmlFor="plan-chat-auto-apply-recommended" className="text-xs sm:text-sm cursor-pointer select-none">
-                    Auto-apply recommended plan
-                  </Label>
-                </div>
-              </div>
+              {showRecommendedPlanButton && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => alert("Apply Recommended Plan (placeholder)")}
+                >
+                  Apply Recommended Plan
+                </Button>
+              )}
               <Button onClick={handleSubmit(onSaveAll)} size="sm">
                 <Save className="h-4 w-4 mr-2" />
                 Save All Targets
               </Button>
             </div>
+            </div>
           </div>
-          <div className="overflow-x-auto w-full">
-            <Table className="w-full" style={{ minWidth: "940px" }}>
+          <div className="w-full overflow-x-auto px-5 sm:px-6">
+            <Table className="w-full min-w-[720px] table-fixed lg:min-w-0">
               <TableHeader>
                 <TableRow className="bg-muted/20">
-                  <TableHead className="w-[320px]">Variable</TableHead>
-                  <TableHead className="w-[150px]">Optimal</TableHead>
-                  <TableHead className="w-[150px]">Current</TableHead>
-                  <TableHead className="w-[190px]">Target</TableHead>
-                  <TableHead className="w-[90px] text-right pr-5">Apply</TableHead>
+                  <TableHead className="w-[34%]">Variable</TableHead>
+                  <TableHead className="w-[18%]">Optimal</TableHead>
+                  <TableHead className="w-[18%]">Current</TableHead>
+                  <TableHead className="w-[30%]">Target</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -356,18 +288,6 @@ export default function Plan() {
                             }}
                           />
                         )}
-                      </TableCell>
-                      <TableCell className="text-right py-3">
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="h-9 w-9"
-                          onClick={() => onApplySingle(key)}
-                          title="Apply this change"
-                        >
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
                       </TableCell>
                     </TableRow>
                   );
