@@ -24,14 +24,7 @@ export default function Plan() {
     setError,
     latestDiffDetected,
     latestSuggestedPlan,
-    hasStartedChatByUser,
   } = useStore();
-  const hasChatStarted = !!(userId && hasStartedChatByUser[userId]);
-  const showRecommendedPlanButton =
-    hasChatStarted ||
-    !!(latestDiffDetected && Object.keys(latestDiffDetected).length > 0) ||
-    !!(latestSuggestedPlan && Object.keys(latestSuggestedPlan).length > 0);
-
   const normalizeTargetDefaults = (values: Record<string, any>) => {
     const next = { ...(values || {}) };
     Object.keys(next).forEach((k) => {
@@ -145,19 +138,10 @@ export default function Plan() {
         targetPlan: newTargetPlan,
         optimalPlan: useStore.getState().optimalPlan,
       });
-
-      reset(normalizeTargetDefaults(newTargetPlan as any));
-
-      const targetDiff: Record<string, number> = {};
-      Object.keys(newTargetPlan).forEach((key) => {
-        const val = newTargetPlan[key as VariableKey];
-        if (val !== undefined && val !== null && val !== 0) {
-          targetDiff[key] = Number(val);
-        }
-      });
-
-      await updateTargetPlan(targetDiff);
+      await updateTargetPlan(latestSuggestedPlan);
       await loadPlans(userId);
+      const { targetPlan: refreshedTarget } = useStore.getState();
+      reset(normalizeTargetDefaults((refreshedTarget || {}) as any));
     } catch (error) {
       console.error("[PLAN] Failed to apply recommended plan:", error);
       alert("Failed to apply recommended plan");
@@ -213,39 +197,40 @@ export default function Plan() {
         <Card className="overflow-hidden">
           <div className="border-b bg-muted/20 px-5 py-4 sm:px-6 sm:py-5">
             <div className="flex flex-wrap gap-3 sm:justify-end">
-            {latestDiffDetected && Object.keys(latestDiffDetected).length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                if (!userId) return;
+                if (!latestDiffDetected || Object.keys(latestDiffDetected).length === 0) {
+                  alert("No extracted variables available yet. Send a chat message first.");
+                  return;
+                }
+                try {
+                  setLoading(true);
+                  await updateTargetPlan(latestDiffDetected);
+                  await loadPlans(userId);
+                  const { targetPlan: refreshedTarget } = useStore.getState();
+                  reset(normalizeTargetDefaults((refreshedTarget || {}) as any));
+                } catch (error) {
+                  console.error("[PLAN] Failed to apply extracted variables:", error);
+                  alert("Failed to apply extracted variables");
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              Apply Extracted Variables
+            </Button>
+            <div className="flex w-full flex-wrap items-center justify-end gap-x-4 gap-y-2 sm:w-auto">
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
-                onClick={async () => {
-                  if (!userId) return;
-                  try {
-                    setLoading(true);
-                    await updateTargetPlan(latestDiffDetected);
-                    await loadPlans(userId);
-                    reset(normalizeTargetDefaults({ ...targetPlan, ...latestDiffDetected } as any));
-                  } catch (error) {
-                    console.error("[PLAN] Failed to apply extracted variables:", error);
-                    alert("Failed to apply extracted variables");
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
+                onClick={onApplyRecommendedPlan}
               >
-                Apply Extracted Variables
+                Apply Recommended Plan
               </Button>
-            )}
-            <div className="flex w-full flex-wrap items-center justify-end gap-x-4 gap-y-2 sm:w-auto">
-              {showRecommendedPlanButton && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={onApplyRecommendedPlan}
-                >
-                  Apply Recommended Plan
-                </Button>
-              )}
               <Button onClick={handleSubmit(onSaveAll)} size="sm">
                 <Save className="h-4 w-4 mr-2" />
                 Save All Targets
