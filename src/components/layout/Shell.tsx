@@ -17,12 +17,16 @@ interface ShellProps {
 
 export function Shell({ children, showChat = true, showNav = true }: ShellProps) {
   const [location, setLocation] = useLocation();
-  const { userId } = useStore();
+  const {
+    userId,
+    chatAutoApplyExtractedVars,
+    chatAutoApplyRecommendedPlan,
+    setChatAutoApplyExtractedVars,
+    setChatAutoApplyRecommendedPlan,
+  } = useStore();
   const [isChatCollapsed, setIsChatCollapsed] = useState(true);
   const [panelTab, setPanelTab] = useState<"chat" | "projections">("chat");
   const [projectionsRecalcNonce, setProjectionsRecalcNonce] = useState(0);
-  const [autoApply, setAutoApply] = useState(false);
-  const [autoApplyRecommended, setAutoApplyRecommended] = useState(false);
   const [isChatSettingsOpen, setIsChatSettingsOpen] = useState(false);
   const [clearChatNonce, setClearChatNonce] = useState(0);
   const settingsRef = useRef<HTMLDivElement>(null);
@@ -57,11 +61,11 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
   ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="flex min-h-screen flex-col bg-background">
       {/* Top Bar */}
-      <header className="border-b bg-white h-14 sticky top-0 z-10">
+      <header className="sticky top-0 z-10 h-14 border-b border-border bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80">
         <div className="h-14 w-full max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 font-bold text-xl text-primary hover:opacity-80 transition-opacity">
+          <Link href="/" className="flex items-center gap-2 font-bold text-xl text-primary hover:opacity-85 transition-opacity">
             <Activity className="h-6 w-6" />
             <span>Mety Chatbot</span>
           </Link>
@@ -98,7 +102,7 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
         <main className="flex-1 flex flex-col overflow-hidden">
           {/* Navigation Tabs */}
           {showNav && userId && (
-            <div className="border-b bg-muted/30 px-6 py-2 flex gap-1">
+            <div className="flex gap-2 border-b border-border/70 bg-muted/40 px-6 py-2">
               {navItems.map((item) => {
                 const isActive = location === item.href || location.startsWith(item.href + "/");
                 const Icon = item.icon;
@@ -107,10 +111,10 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
                     key={item.href} 
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                      "flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all",
                       isActive 
-                        ? "bg-primary/10 text-primary" 
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        ? "bg-primary text-primary-foreground shadow-sm shadow-primary/25" 
+                        : "text-muted-foreground hover:bg-background hover:text-foreground"
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -136,7 +140,7 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
                 size="icon"
                 onClick={() => setIsChatCollapsed(false)}
                 variant="default"
-                className="h-12 w-12 rounded-full shadow-lg"
+                className="h-12 w-12 rounded-full shadow-lg shadow-primary/25 ring-2 ring-primary/15"
                 title="Open Chat"
                 aria-label="Open Chat"
               >
@@ -147,13 +151,12 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
             <div
               className={[
                 "fixed z-20 flex flex-col overflow-hidden",
-                "bg-white",
-                "shadow-xl ring-1 ring-black/10 border border-black/5",
-                "bottom-4 right-4 w-[calc(100vw-2rem)] max-w-[520px] h-[72vh] rounded-2xl",
-                "lg:w-[420px] lg:h-[72vh]",
+                "border border-border bg-card/95 shadow-lg shadow-black/[0.06] backdrop-blur-md",
+                "bottom-4 right-4 h-[72vh] w-[calc(100vw-2rem)] max-w-[520px] rounded-2xl",
+                "lg:h-[72vh] lg:w-[420px]",
               ].join(" ")}
             >
-              <div className="px-4 py-3 border-b border-black/5 bg-white">
+              <div className="border-b border-border/70 bg-muted/20 px-4 py-3">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div className="flex items-center gap-3 min-w-0 flex-wrap">
                     <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
@@ -203,7 +206,7 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className="h-9 w-9"
                         onClick={() => setIsChatSettingsOpen((v) => !v)}
                         aria-label="Chat settings"
                         title="Settings"
@@ -212,33 +215,37 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
                       </Button>
 
                       {isChatSettingsOpen && (
-                        <div className="absolute right-0 mt-2 w-64 rounded-xl border border-black/5 bg-white shadow-xl ring-1 ring-black/5 p-3 space-y-3 z-50">
-                          <div className="text-xs font-semibold text-muted-foreground">Settings</div>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Checkbox
-                                id="auto-apply"
-                                checked={autoApply}
-                                onCheckedChange={(c) => setAutoApply(!!c)}
-                              />
-                              <Label htmlFor="auto-apply" className="text-xs cursor-pointer select-none">
-                                Auto-apply extracted variables
-                              </Label>
+                        <div className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-border bg-popover p-3 shadow-lg">
+                          <div className="text-xs font-semibold text-muted-foreground">Chat</div>
+                          <div className="mt-3 space-y-3">
+                            <div className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-2.5">
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  id="chat-auto-apply-vars"
+                                  checked={chatAutoApplyExtractedVars}
+                                  onCheckedChange={(checked) => setChatAutoApplyExtractedVars(!!checked)}
+                                />
+                                <Label
+                                  htmlFor="chat-auto-apply-vars"
+                                  className="text-xs cursor-pointer text-foreground/90 select-none"
+                                >
+                                  Auto-apply extracted variables
+                                </Label>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  id="chat-auto-apply-recommended"
+                                  checked={chatAutoApplyRecommendedPlan}
+                                  onCheckedChange={(checked) => setChatAutoApplyRecommendedPlan(!!checked)}
+                                />
+                                <Label
+                                  htmlFor="chat-auto-apply-recommended"
+                                  className="text-xs cursor-pointer text-foreground/90 select-none"
+                                >
+                                  Auto-apply recommended plan
+                                </Label>
+                              </div>
                             </div>
-
-                            <div className="flex items-center gap-2">
-                              <Checkbox
-                                id="auto-apply-recommended"
-                                checked={autoApplyRecommended}
-                                onCheckedChange={(c) => setAutoApplyRecommended(!!c)}
-                              />
-                              <Label htmlFor="auto-apply-recommended" className="text-xs cursor-pointer select-none">
-                                Auto-apply recommended plan
-                              </Label>
-                            </div>
-                          </div>
-
-                          <div className="pt-2 border-t border-black/5">
                             <Button
                               type="button"
                               variant="destructive"
@@ -262,9 +269,9 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
 
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="icon"
                       onClick={() => setIsChatCollapsed(true)}
-                      className="h-6 w-6 p-0"
+                      className="h-9 w-9"
                       aria-label="Collapse panel"
                       title="Collapse"
                     >
@@ -278,13 +285,13 @@ export function Shell({ children, showChat = true, showNav = true }: ShellProps)
               <div className="flex-1 overflow-hidden">
                 {panelTab === "chat" ? (
                   <ChatPanel
-                    autoApply={autoApply}
-                    autoApplyRecommended={autoApplyRecommended}
+                    autoApply={chatAutoApplyExtractedVars}
+                    autoApplyRecommended={chatAutoApplyRecommendedPlan}
                     clearChatNonce={clearChatNonce}
                   />
                 ) : (
                   <div className="h-full overflow-y-auto p-3">
-                    <div className="rounded-2xl bg-white border border-black/5 shadow-sm p-3">
+                    <div className="rounded-2xl border border-border/80 bg-card p-3 shadow-sm">
                       <LifespanCard embedded recalculateNonce={projectionsRecalcNonce} />
                     </div>
                   </div>

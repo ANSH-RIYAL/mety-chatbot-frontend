@@ -118,16 +118,16 @@ export default function Log() {
 
   return (
     <Shell>
-      <div className="p-6 space-y-6">
+      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
             <div>
-              <h1 className="text-3xl font-bold text-primary">Daily Log</h1>
-              <p className="text-muted-foreground">
+              <h1 className="text-3xl font-bold text-primary tracking-tight">Daily Log</h1>
+              <p className="text-muted-foreground mt-1">
                 Track your adherence to the plan
               </p>
             </div>
 
             {/* Date inputs */}
-            <Card>
+            <Card className="overflow-hidden">
               <CardContent className="p-6 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-end gap-4">
                   <div className="grid gap-2">
@@ -137,7 +137,7 @@ export default function Log() {
                       type="date"
                       value={periodStart}
                       onChange={(e) => setPeriodStart(e.target.value)}
-                      className="h-8 w-40"
+                      className="w-44"
                       required
                     />
                   </div>
@@ -148,7 +148,7 @@ export default function Log() {
                       type="date"
                       value={periodEnd}
                       onChange={(e) => setPeriodEnd(e.target.value)}
-                      className="h-8 w-40"
+                      className="w-44"
                       required
                     />
                   </div>
@@ -161,9 +161,9 @@ export default function Log() {
 
             {/* Adherence display */}
             {adherence && (
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid gap-4 md:grid-cols-3">
                 <Card className="bg-green-50 border-green-100">
-                  <CardContent className="p-4 text-center">
+                  <CardContent className="p-5 text-center">
                     <div className="text-2xl font-bold text-primary">
                       {(adherence.total * 100).toFixed(0)}%
                     </div>
@@ -171,7 +171,7 @@ export default function Log() {
                   </CardContent>
                 </Card>
                 <Card>
-                  <CardContent className="p-4 text-center">
+                  <CardContent className="p-5 text-center">
                     <div className="text-2xl font-bold text-primary">
                       {(adherence.diet * 100).toFixed(0)}%
                     </div>
@@ -179,7 +179,7 @@ export default function Log() {
                   </CardContent>
                 </Card>
                 <Card>
-                  <CardContent className="p-4 text-center">
+                  <CardContent className="p-5 text-center">
                     <div className="text-2xl font-bold text-primary">
                       {(adherence.supplement * 100).toFixed(0)}%
                     </div>
@@ -211,7 +211,7 @@ export default function Log() {
             )}
 
             {/* Log form */}
-            <Card>
+            <Card className="overflow-hidden">
               <div className="p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold">Log Values</h2>
@@ -221,12 +221,12 @@ export default function Log() {
                   </Button>
                 </div>
                 <div className="overflow-x-auto">
-                  <Table>
+                  <Table style={{ minWidth: "820px" }}>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[250px]">Variable</TableHead>
-                        <TableHead className="w-[80px]">Target</TableHead>
-                        <TableHead className="w-[200px]">Log Value</TableHead>
+                      <TableRow className="bg-muted/20">
+                        <TableHead className="w-[340px]">Variable</TableHead>
+                        <TableHead className="w-[170px]">Target</TableHead>
+                        <TableHead className="w-[220px]">Log Value</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -234,7 +234,7 @@ export default function Log() {
                         <TableRow key={key}>
                           <TableCell className="font-medium">
                             <div className="flex flex-col">
-                              <span className="capitalize">{key.replace(/_/g, " ")}</span>
+                              <span className="capitalize text-sm font-semibold">{key.replace(/_/g, " ")}</span>
                               <span className="text-xs text-muted-foreground">{UNITS[key]}</span>
                             </div>
                           </TableCell>
@@ -258,7 +258,7 @@ export default function Log() {
                                   setValue(key, parseInt(v, 10), { shouldDirty: true })
                                 }
                               >
-                                <SelectTrigger className="h-8 w-24">
+                                <SelectTrigger className="w-36">
                                   <SelectValue placeholder="Select..." />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -275,7 +275,7 @@ export default function Log() {
                               <Input 
                                 type="number" 
                                 step="0.1"
-                                className="h-8 w-24"
+                                className="w-36"
                                 value={watch(key) ?? ""}
                                 onChange={(e) => {
                                   const val = e.target.value;
