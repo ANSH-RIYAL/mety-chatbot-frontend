@@ -128,6 +128,44 @@ export default function Plan() {
     }
   };
 
+  const onApplyRecommendedPlan = async () => {
+    if (!userId) return;
+    if (!latestSuggestedPlan || Object.keys(latestSuggestedPlan).length === 0) {
+      alert("No recommended plan available yet. Send a chat message first.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { targetPlan: currentTarget, setPlans } = useStore.getState();
+      const newTargetPlan = { ...currentTarget, ...latestSuggestedPlan };
+
+      setPlans({
+        currentPlan: useStore.getState().currentPlan,
+        targetPlan: newTargetPlan,
+        optimalPlan: useStore.getState().optimalPlan,
+      });
+
+      reset(normalizeTargetDefaults(newTargetPlan as any));
+
+      const targetDiff: Record<string, number> = {};
+      Object.keys(newTargetPlan).forEach((key) => {
+        const val = newTargetPlan[key as VariableKey];
+        if (val !== undefined && val !== null && val !== 0) {
+          targetDiff[key] = Number(val);
+        }
+      });
+
+      await updateTargetPlan(targetDiff);
+      await loadPlans(userId);
+    } catch (error) {
+      console.error("[PLAN] Failed to apply recommended plan:", error);
+      alert("Failed to apply recommended plan");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getOrderedKeys = (): VariableKey[] => {
     const ordered: VariableKey[] = [
       ...VARIABLE_GROUPS.supplements,
@@ -203,7 +241,7 @@ export default function Plan() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => alert("Apply Recommended Plan (placeholder)")}
+                  onClick={onApplyRecommendedPlan}
                 >
                   Apply Recommended Plan
                 </Button>
