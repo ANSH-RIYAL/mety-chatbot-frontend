@@ -8,7 +8,7 @@ export const API_CONFIG = {
   BACKEND_BASE_URL: import.meta.env.VITE_BACKEND_URL || "http://localhost:8000",
   
   // Prediction API URL (direct connection from frontend)
-  PREDICTION_API_URL: import.meta.env.VITE_PREDICTION_API_URL || "https://mlmodel.myyouthspan.com/prediction_model_test/",
+  PREDICTION_API_URL: import.meta.env.VITE_PREDICTION_API_URL || "https://ml-prediction-api-172415469528.us-central1.run.app/prediction_model_test/",
 } as const;
 
 console.log("[API CONFIG] Backend URL:", API_CONFIG.BACKEND_BASE_URL);
